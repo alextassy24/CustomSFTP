@@ -1,6 +1,4 @@
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Serilog;
 
 namespace CustomSftpTool.Commands
@@ -9,7 +7,7 @@ namespace CustomSftpTool.Commands
     {
         public static async Task<bool> PublishApplicationAsync(string csprojPath, string outputPath)
         {
-            var result = await RunProcessAsync(
+            (bool Success, string Error) result = await RunProcessAsync(
                 "dotnet",
                 $"publish \"{csprojPath}\" -c Release -o \"{outputPath}\""
             );
@@ -25,7 +23,10 @@ namespace CustomSftpTool.Commands
 
         public static async Task<bool> CleanApplicationAsync(string csprojPath)
         {
-            var result = await RunProcessAsync("dotnet", $"clean \"{csprojPath}\"");
+            (bool Success, string Error) result = await RunProcessAsync(
+                "dotnet",
+                $"clean \"{csprojPath}\""
+            );
 
             if (!result.Success)
             {
@@ -41,18 +42,19 @@ namespace CustomSftpTool.Commands
             string arguments
         )
         {
-            var tcs = new TaskCompletionSource<(bool, string)>();
+            TaskCompletionSource<(bool, string)> tcs = new();
 
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                Arguments = arguments,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+            ProcessStartInfo processStartInfo =
+                new()
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
 
-            var process = new Process { StartInfo = processStartInfo, EnableRaisingEvents = true };
+            Process process = new() { StartInfo = processStartInfo, EnableRaisingEvents = true };
 
             string error = string.Empty;
 
@@ -66,7 +68,7 @@ namespace CustomSftpTool.Commands
 
             process.Exited += (sender, e) =>
             {
-                var success = process.ExitCode == 0;
+                bool success = process.ExitCode == 0;
                 process.Dispose();
                 tcs.SetResult((success, error));
             };

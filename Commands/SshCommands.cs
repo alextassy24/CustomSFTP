@@ -1,4 +1,3 @@
-using System;
 using Renci.SshNet;
 using Serilog;
 
@@ -10,9 +9,9 @@ namespace CustomSftpTool.Commands
         {
             try
             {
-                var keyFile = new PrivateKeyFile(privateKeyPath);
-                var keyAuth = new PrivateKeyAuthenticationMethod(username, keyFile);
-                var connectionInfo = new ConnectionInfo(host, username, keyAuth);
+                PrivateKeyFile keyFile = new(privateKeyPath);
+                PrivateKeyAuthenticationMethod keyAuth = new(username, keyFile);
+                ConnectionInfo connectionInfo = new(host, username, keyAuth);
 
                 return new SshClient(connectionInfo);
             }
@@ -27,8 +26,8 @@ namespace CustomSftpTool.Commands
         {
             try
             {
-                var cmd = sshClient.CreateCommand(command);
-                var commandResult = cmd.Execute();
+                SshCommand cmd = sshClient.CreateCommand(command);
+                string commandResult = cmd.Execute();
 
                 if (!string.IsNullOrEmpty(cmd.Error))
                 {

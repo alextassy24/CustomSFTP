@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 using Renci.SshNet;
 using Serilog;
 using ShellProgressBar;
@@ -21,7 +17,7 @@ namespace CustomSftpTool.Commands
             {
                 try
                 {
-                    var filesToUpload = GetFilesToUpload(
+                    List<KeyValuePair<string, string>> filesToUpload = GetFilesToUpload(
                         sftpClient,
                         localPath,
                         remotePath,
@@ -36,25 +32,26 @@ namespace CustomSftpTool.Commands
                     }
 
                     using (
-                        var progressBar = new ProgressBar(
-                            totalFiles,
-                            "Uploading files...",
-                            new ProgressBarOptions
-                            {
-                                ForegroundColor = ConsoleColor.Green,
-                                ForegroundColorDone = ConsoleColor.DarkGreen,
-                                BackgroundColor = ConsoleColor.DarkGray,
-                                ProgressCharacter = '─'
-                            }
-                        )
+                        ProgressBar progressBar =
+                            new(
+                                totalFiles,
+                                "Uploading files...",
+                                new ProgressBarOptions
+                                {
+                                    ForegroundColor = ConsoleColor.Green,
+                                    ForegroundColorDone = ConsoleColor.DarkGreen,
+                                    BackgroundColor = ConsoleColor.DarkGray,
+                                    ProgressCharacter = '─'
+                                }
+                            )
                     )
                     {
-                        foreach (var filePair in filesToUpload)
+                        foreach (KeyValuePair<string, string> filePair in filesToUpload)
                         {
                             string localFile = filePair.Key;
                             string remoteFile = filePair.Value;
 
-                            using var fileStream = File.OpenRead(localFile);
+                            using FileStream fileStream = File.OpenRead(localFile);
                             sftpClient.UploadFile(fileStream, remoteFile, true);
                             progressBar.Tick($"Uploaded: {Path.GetFileName(localFile)}");
                         }
@@ -72,7 +69,7 @@ namespace CustomSftpTool.Commands
 
         private static bool ShouldExclude(string relativePath, List<string> exclusions)
         {
-            foreach (var exclusion in exclusions)
+            foreach (string exclusion in exclusions)
             {
                 if (relativePath.StartsWith(exclusion, StringComparison.OrdinalIgnoreCase))
                 {
@@ -93,8 +90,10 @@ namespace CustomSftpTool.Commands
                 return true; // Remote file does not exist
             }
 
-            var localFileInfo = new FileInfo(localFilePath);
-            var remoteFileInfo = sftp.GetAttributes(remoteFilePath);
+            FileInfo localFileInfo = new(localFilePath);
+            Renci.SshNet.Sftp.SftpFileAttributes remoteFileInfo = sftp.GetAttributes(
+                remoteFilePath
+            );
 
             // Compare file sizes and modification times
             if (localFileInfo.Length != remoteFileInfo.Size)
@@ -117,10 +116,10 @@ namespace CustomSftpTool.Commands
             List<string> exclusions
         )
         {
-            var filesToUpload = new List<KeyValuePair<string, string>>();
+            List<KeyValuePair<string, string>> filesToUpload = new();
 
-            var files = Directory.GetFiles(localPath);
-            foreach (var file in files)
+            string[] files = Directory.GetFiles(localPath);
+            foreach (string file in files)
             {
                 string relativePath = Path.GetRelativePath(localPath, file);
                 if (ShouldExclude(relativePath, exclusions))
@@ -135,8 +134,8 @@ namespace CustomSftpTool.Commands
                 }
             }
 
-            var directories = Directory.GetDirectories(localPath);
-            foreach (var directory in directories)
+            string[] directories = Directory.GetDirectories(localPath);
+            foreach (string directory in directories)
             {
                 string dirName = Path.GetFileName(directory);
                 string relativePath = Path.GetRelativePath(localPath, directory);
@@ -151,7 +150,12 @@ namespace CustomSftpTool.Commands
                     Log.Debug($"Created remote directory: {remoteDir}");
                 }
 
-                var subFiles = GetFilesToUpload(sftpClient, directory, remoteDir, exclusions);
+                List<KeyValuePair<string, string>> subFiles = GetFilesToUpload(
+                    sftpClient,
+                    directory,
+                    remoteDir,
+                    exclusions
+                );
                 filesToUpload.AddRange(subFiles);
             }
 

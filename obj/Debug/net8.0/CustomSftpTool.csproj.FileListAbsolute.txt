@@ -1,8 +1,8 @@
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\CustomSftpTool.exe
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\CustomSftpTool.deps.json
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\CustomSftpTool.runtimeconfig.json
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\CustomSftpTool.dll
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\CustomSftpTool.pdb
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\customSSH.exe
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\customSSH.deps.json
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\customSSH.runtimeconfig.json
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\customSSH.dll
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\customSSH.pdb
 C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\Serilog.dll
 C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\Serilog.Sinks.Console.dll
 C:\Users\admin\Desktop\Scripts\CustomSftpTool\bin\Debug\net8.0\Serilog.Sinks.File.dll
@@ -14,8 +14,8 @@ C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\CustomSftpTool.As
 C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\CustomSftpTool.AssemblyInfo.cs
 C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\CustomSftpTool.csproj.CoreCompileInputs.cache
 C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\CustomSf.E821F8E9.Up2Date
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\CustomSftpTool.dll
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\refint\CustomSftpTool.dll
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\CustomSftpTool.pdb
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\customSSH.dll
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\refint\customSSH.dll
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\customSSH.pdb
 C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\CustomSftpTool.genruntimeconfig.cache
-C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\ref\CustomSftpTool.dll
+C:\Users\admin\Desktop\Scripts\CustomSftpTool\obj\Debug\net8.0\ref\customSSH.dll

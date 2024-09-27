@@ -1,33 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using CustomSftpTool.Commands;
-using Renci.SshNet;
+﻿using CustomSftpTool.Models;
+using CustomSftpTool.Profile;
 using Serilog;
 
 namespace CustomSftpTool
 {
-    class Program
+    internal class Program
     {
-        // Connection info
-        private static readonly string Host = "193.230.3.37";
-        private static readonly string UserName = "iciadmin";
-        private static readonly string PrivateKeyPath = @"C:\Users\admin\.ssh\id_rsa"; // Updated path to OpenSSH key
+        // // Connection info
+        // private static readonly string Host = @"193.230.3.37";
+        // private static readonly string UserName = "iciadmin";
+        // private static readonly string PrivateKeyPath = @"C:\Users\admin\.ssh\id_rsa"; // Updated path to OpenSSH key
 
-        // Define your local and remote directories
-        private static readonly string CsprojPath = @"C:\Users\admin\Desktop\CdM\CdM\CdM.csproj";
-        private static readonly string LocalDir = @"C:\Users\admin\Desktop\CdMDeploy";
-        private static readonly string RemoteDir = "/var/www/case";
-        private static readonly string ServiceName = "case";
+        // // Define your local and remote directories
+        // private static readonly string CsprojPath = @"C:\Users\admin\Desktop\CdM\CdM\CdM.csproj";
+        // private static readonly string LocalDir = @"C:\Users\admin\Desktop\CdMDeploy";
+        // private static readonly string RemoteDir = "/var/www/case";
+        // private static readonly string ServiceName = "case";
 
         // Define exclusions relative to the local directory
-        private static readonly List<string> Exclusions = new List<string>
-        {
-            "appsettings.json",
-            "appsettings.Development.json",
-            "wwwroot\\Files"
-        };
+        // private static readonly List<string> Exclusions =
+        // [
+        //     "appsettings.json",
+        //     "appsettings.Development.json",
+        //     "wwwroot\\Files"
+        // ];
 
         public static async Task Main(string[] args)
         {
@@ -41,145 +37,133 @@ namespace CustomSftpTool
 
             try
             {
-                Log.Information(ConsoleColors.Cyan("Starting deployment..."));
-                var totalStopwatch = Stopwatch.StartNew();
-                Log.Information(ConsoleColors.Cyan("Cleaning the application..."));
-                var cleanStopwatch = Stopwatch.StartNew();
-                var cleanApp = await DotnetCommands.CleanApplicationAsync(CsprojPath);
-                cleanStopwatch.Stop();
-                if (!cleanApp)
+                if (args.Length == 0)
                 {
-                    Log.Error(ConsoleColors.Red("Failed to clean the application."));
-                    return;
-                }
-                Log.Information(
-                    ConsoleColors.Green("Cleaning completed in {Elapsed} seconds."),
-                    cleanStopwatch.Elapsed.TotalSeconds
-                );
-
-                Log.Information(ConsoleColors.Cyan("Publishing the application..."));
-                var publishStopwatch = Stopwatch.StartNew();
-                var publishApp = await DotnetCommands.PublishApplicationAsync(CsprojPath, LocalDir);
-                publishStopwatch.Stop();
-                if (!publishApp)
-                {
-                    Log.Error(ConsoleColors.Red("Failed to publish the application."));
-                    return;
-                }
-                Log.Information(
-                    ConsoleColors.Green("Publishing completed in {Elapsed} seconds."),
-                    publishStopwatch.Elapsed.TotalSeconds
-                );
-
-                Log.Information(ConsoleColors.Cyan("Connecting to SSH..."));
-                using var sshClient = SshCommands.CreateSshClient(Host, UserName, PrivateKeyPath);
-
-                sshClient.Connect();
-
-                Log.Information(ConsoleColors.Cyan("Checking service status..."));
-                string? serviceStatus = SshCommands.ExecuteCommand(
-                    sshClient,
-                    $"sudo systemctl is-active {ServiceName}"
-                );
-
-                if (string.IsNullOrEmpty(serviceStatus) || serviceStatus.Trim() != "active")
-                {
-                    Log.Warning(
-                        ConsoleColors.Red(
-                            ($"Service {ServiceName} is not active or failed to check status.")
-                        )
-                    );
-                    sshClient.Disconnect();
+                    ShowHelp();
                     return;
                 }
 
-                Log.Information(ConsoleColors.Green($"Service {ServiceName} is active."));
-                Log.Information(ConsoleColors.Cyan($"Stopping service {ServiceName}."));
+                string command = args[0].ToLower();
+                string profileName = string.Empty;
 
-                string? stopServiceResult = SshCommands.ExecuteCommand(
-                    sshClient,
-                    $"sudo systemctl stop {ServiceName}"
-                );
-
-                if (stopServiceResult == null)
+                // Combine all arguments after the command into a single profile name
+                if (args.Length > 1)
                 {
-                    Log.Error(ConsoleColors.Red($"Failed to stop service {ServiceName}."));
-                    sshClient.Disconnect();
-                    return;
+                    profileName = string.Join(' ', args.Skip(1));
                 }
 
-                Log.Information(ConsoleColors.Green($"Service {ServiceName} is stopped."));
-                Log.Information(ConsoleColors.Cyan("Transferring newer files..."));
-
-                using var sftpClient = new SftpClient(sshClient.ConnectionInfo);
-                sftpClient.Connect();
-
-                bool uploadFiles = await SftpCommands.UploadDirectoryAsync(
-                    sftpClient,
-                    LocalDir,
-                    RemoteDir,
-                    Exclusions
-                );
-
-                sftpClient.Disconnect();
-
-                if (!uploadFiles)
+                switch (command)
                 {
-                    Log.Error(ConsoleColors.Red("Failed to transfer newer files."));
-                    Log.Information(ConsoleColors.Cyan($"Restarting service {ServiceName}..."));
-                    SshCommands.ExecuteCommand(sshClient, $"sudo systemctl start {ServiceName}");
-                    sshClient.Disconnect();
-                    return;
+                    case "--deploy":
+                        if (!string.IsNullOrEmpty(profileName))
+                        {
+                            await ProfileCommands.DeployUsingProfile(profileName);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Error: Missing profile name.");
+                            Console.WriteLine("Usage: customSSH --deploy <ProfileName>");
+                        }
+                        break;
+                    case "--add-profile":
+                        ProfileCommands.AddProfile();
+                        break;
+                    case "--list-profiles":
+                        ProfileCommands.ListProfiles();
+                        break;
+                    case "--show-profile":
+                        if (!string.IsNullOrEmpty(profileName))
+                        {
+                            ProfileData? profile = ProfileCommands.LoadProfile(profileName);
+                            if (profile != null)
+                                ProfileCommands.ShowProfile(profile);
+                            else
+                            {
+                                Console.WriteLine(
+                                    $"Error: Profile '{profileName}' could not be found."
+                                );
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Error: Missing profile name.");
+                            Console.WriteLine("Usage: customSSH --show-profile <ProfileName>");
+                        }
+                        break;
+                    case "--edit-profile":
+                        if (!string.IsNullOrEmpty(profileName))
+                        {
+                            ProfileCommands.EditProfile(profileName);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Error: Missing profile name.");
+                            Console.WriteLine("Usage: customSSH --edit-profile <ProfileName>");
+                        }
+                        break;
+                    case "--remove-profile":
+                        if (!string.IsNullOrEmpty(profileName))
+                        {
+                            ProfileCommands.RemoveProfile(profileName);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Error: Missing profile name.");
+                            Console.WriteLine("Usage: customSSH --remove-profile <ProfileName>");
+                        }
+                        break;
+                    case "--help":
+                        ShowHelp();
+                        break;
+                    default:
+                        Console.WriteLine($"Unknown command: {command}");
+                        ShowHelp();
+                        break;
                 }
-
-                Log.Information(ConsoleColors.Cyan("Transferred newer files."));
-                Log.Information(ConsoleColors.Cyan($"Restarting service {ServiceName}..."));
-                string? startServiceResult = SshCommands.ExecuteCommand(
-                    sshClient,
-                    $"sudo systemctl start {ServiceName}"
-                );
-
-                if (startServiceResult == null)
-                {
-                    Log.Error(ConsoleColors.Red($"Failed to start service {ServiceName}."));
-                    sshClient.Disconnect();
-                    return;
-                }
-
-                Log.Information(ConsoleColors.Green($"Service {ServiceName} is started."));
-                Log.Information(ConsoleColors.Cyan("Checking its status..."));
-                await Task.Delay(2000);
-
-                serviceStatus = SshCommands.ExecuteCommand(
-                    sshClient,
-                    $"sudo systemctl is-active {ServiceName}"
-                );
-
-                if (serviceStatus != null && serviceStatus.Trim() == "active")
-                {
-                    Log.Information(ConsoleColors.Green($"Service {ServiceName} is active again."));
-                    Log.Information(ConsoleColors.Green("Deployment completed successfully!"));
-                }
-                else
-                {
-                    Log.Error(ConsoleColors.Red($"Service {ServiceName} failed to start."));
-                }
-                totalStopwatch.Stop();
-                Log.Information(
-                    ConsoleColors.Green("Deployment completed in {Elapsed} seconds."),
-                    totalStopwatch.Elapsed.TotalSeconds
-                );
-                sshClient.Disconnect();
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "An error occurred during deployment.");
+                Log.Fatal(ex, "An unhandled exception occurred.");
+                Console.WriteLine($"An unexpected error occurred: {ex.Message}");
             }
             finally
             {
-                Log.Information(ConsoleColors.Green("Deployment process finished."));
                 Log.CloseAndFlush();
             }
+        }
+
+        public static void ShowHelp()
+        {
+            Console.WriteLine("Description:");
+            Console.WriteLine("  Custom SFTP Deployment Tool");
+
+            Console.WriteLine("\nUsage:");
+            Console.WriteLine("  customSSH [command] [options]");
+
+            Console.WriteLine("\nCommands:");
+            PrintOption("--deploy <ProfileName>", "Deploy using a profile");
+            PrintOption("--add-profile", "Add a new profile");
+            PrintOption("--list-profiles", "List all available profiles");
+            PrintOption("--show-profile <ProfileName>", "Show details of a profile");
+            PrintOption("--edit-profile <ProfileName>", "Edit an existing profile");
+            PrintOption("--remove-profile <ProfileName>", "Remove a profile");
+            PrintOption("--help", "Show help and usage information");
+
+            Console.WriteLine(
+                "\nOptions (for use with commands like --add-profile or --edit-profile):"
+            );
+            PrintOption("--host <host>", "The SSH host");
+            PrintOption("--username <username>", "The SSH username");
+            PrintOption("--privateKeyPath <path>", "Path to the private SSH key");
+            PrintOption("--csprojPath <path>", "Path to the .csproj file");
+            PrintOption("--localDir <path>", "Local directory for the build output");
+            PrintOption("--remoteDir <path>", "Remote directory to deploy to");
+            PrintOption("--serviceName <name>", "Name of the service to restart");
+        }
+
+        private static void PrintOption(string option, string description)
+        {
+            Console.WriteLine($"  {option, -35} {description}");
         }
     }
 }
