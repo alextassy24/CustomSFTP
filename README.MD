@@ -11,7 +11,7 @@
 3. [Installation](#installation)
 4. [Building the Application](#building-the-application)
 5. [Publishing as a Standalone Executable](#publishing-as-a-standalone-executable)
-6. [Adding `customSSH` to the System PATH](#adding-customssh-to-the-system-path)
+6. [Adding `customSFTP` to the System PATH](#adding-customssh-to-the-system-path)
 7. [Usage](#usage)
     - [Available Commands](#available-commands)
     - [Examples](#examples)
@@ -96,15 +96,15 @@ Before you begin, ensure you have met the following requirements:
 
 3. **Publishing as a Standalone Executable**
 
-    To run CustomSftpTool as a standalone executable named `customSSH`, you need to publish it as a self-contained application.
+    To run CustomSftpTool as a standalone executable named `customSFTP`, you need to publish it as a self-contained application.
 
     - Set the Assembly Name (Optional):
 
-        To ensure the executable is named `customSSH`, update the `<AssemblyName>` in your `.csproj` file.
+        To ensure the executable is named `customSFTP`, update the `<AssemblyName>` in your `.csproj` file.
 
         ```xml
         <PropertyGroup>
-          <AssemblyName>customSSH</AssemblyName>
+          <AssemblyName>customSFTP</AssemblyName>
           <!-- Other properties -->
         </PropertyGroup>
         ```
@@ -131,11 +131,11 @@ Before you begin, ensure you have met the following requirements:
 
     **Output:**
 
-    After publishing, the publish directory will contain `customSSH.exe` (on Windows) or `customSSH` (on Linux/macOS).
+    After publishing, the publish directory will contain `customSFTP.exe` (on Windows) or `customSFTP` (on Linux/macOS).
 
-4. **Adding customSSH to the System PATH**
+4. **Adding customSFTP to the System PATH**
 
-    Adding `customSSH` to your system's PATH allows you to run it from any directory without specifying its full path.
+    Adding `customSFTP` to your system's PATH allows you to run it from any directory without specifying its full path.
 
     **Method 1: Adding the publish Directory to PATH**
 
@@ -173,15 +173,15 @@ Before you begin, ensure you have met the following requirements:
 
         Close and reopen PowerShell to apply the changes.
 
-    - Run `customSSH`:
+    - Run `customSFTP`:
 
         Now, you can run:
 
         ```powershell
-        customSSH --help
+        customSFTP --help
         ```
 
-    **Method 2: Copying customSSH.exe to an Existing PATH Directory**
+    **Method 2: Copying customSFTP.exe to an Existing PATH Directory**
 
     - Locate a PATH Directory:
 
@@ -196,13 +196,13 @@ Before you begin, ensure you have met the following requirements:
         Open PowerShell as Administrator and run:
 
         ```powershell
-        Copy-Item -Path "C:\path\to\CustomSftpTool\publish\customSSH.exe" -Destination "C:\Windows\System32\customSSH.exe"
+        Copy-Item -Path "C:\path\to\CustomSftpTool\publish\customSFTP.exe" -Destination "C:\Windows\System32\customSFTP.exe"
         ```
 
-    - Run `customSSH`:
+    - Run `customSFTP`:
 
         ```powershell
-        customSSH --help
+        customSFTP --help
         ```
 
         Note: Administrative privileges are required to copy files to system directories.
@@ -211,7 +211,7 @@ Before you begin, ensure you have met the following requirements:
 
 ## Usage
 
-After successfully adding `customSSH` to your PATH, you can use it as a native command-line tool.
+After successfully adding `customSFTP` to your PATH, you can use it as a native command-line tool.
 
 ### Available Commands
 
@@ -228,13 +228,13 @@ After successfully adding `customSSH` to your PATH, you can use it as a native c
 -   Show Help:
 
     ```powershell
-    customSSH --help
+    customSFTP --help
     ```
 
 -   Add a New Profile:
 
     ```powershell
-    customSSH --add-profile
+    customSFTP --add-profile
     ```
 
     Follow the interactive prompts to enter profile details.
@@ -242,31 +242,31 @@ After successfully adding `customSSH` to your PATH, you can use it as a native c
 -   List All Profiles:
 
     ```powershell
-    customSSH --list-profiles
+    customSFTP --list-profiles
     ```
 
 -   Show a Specific Profile:
 
     ```powershell
-    customSSH --show-profile "Profile Name"
+    customSFTP --show-profile "Profile Name"
     ```
 
 -   Edit an Existing Profile:
 
     ```powershell
-    customSSH --edit-profile "Profile Name"
+    customSFTP --edit-profile "Profile Name"
     ```
 
 -   Remove a Profile:
 
     ```powershell
-    customSSH --remove-profile "Profile Name"
+    customSFTP --remove-profile "Profile Name"
     ```
 
 -   Deploy Using a Profile:
 
     ```powershell
-    customSSH --deploy "Profile Name"
+    customSFTP --deploy "Profile Name"
     ```
 
 ---
@@ -280,7 +280,7 @@ Managing deployment profiles is straightforward with CustomSftpTool. Each profil
 -   Run the Add Profile Command:
 
     ```powershell
-    customSSH --add-profile
+    customSFTP --add-profile
     ```
 
 -   Follow the Prompts:
@@ -302,7 +302,7 @@ Managing deployment profiles is straightforward with CustomSftpTool. Each profil
 -   Run the Edit Profile Command:
 
     ```powershell
-    customSSH --edit-profile "Current Profile Name"
+    customSFTP --edit-profile "Current Profile Name"
     ```
 
 -   Follow the Prompts:
@@ -314,7 +314,7 @@ Managing deployment profiles is straightforward with CustomSftpTool. Each profil
 -   Run the List Profiles Command:
 
     ```powershell
-    customSSH --list-profiles
+    customSFTP --list-profiles
     ```
 
 **Output:**
@@ -330,7 +330,7 @@ Managing deployment profiles is straightforward with CustomSftpTool. Each profil
 -   Run the Show Profile Command:
 
     ```powershell
-    customSSH --show-profile "Profile Name"
+    customSFTP --show-profile "Profile Name"
     ```
 
 **Output:**
@@ -355,13 +355,13 @@ Managing deployment profiles is straightforward with CustomSftpTool. Each profil
 -   Run the Remove Profile Command:
 
     ```powershell
-    customSSH --remove-profile "Profile Name"
+    customSFTP --remove-profile "Profile Name"
     ```
 
     **Example:**
 
     ```powershell
-    customSSH --remove-profile "Profile Name"
+    customSFTP --remove-profile "Profile Name"
     ```
 
 -   Confirmation:
@@ -380,19 +380,19 @@ Deploying your application using CustomSftpTool is seamless once you've set up y
     Verify that the profile you intend to use has all the necessary details and no errors.
 
     ```powershell
-    customSSH --show-profile "Profile Name"
+    customSFTP --show-profile "Profile Name"
     ```
 
 2. **Run the Deploy Command:**
 
     ```powershell
-    customSSH --deploy "Profile Name"
+    customSFTP --deploy "Profile Name"
     ```
 
     - Example:
 
     ```powershell
-    customSSH --deploy "Production Server"
+    customSFTP --deploy "Production Server"
     ```
 
 # Deployment Process:
@@ -417,12 +417,12 @@ Deploying your application using CustomSftpTool is seamless once you've set up y
 
 -   Encountering issues? Here are some common problems and their solutions.
 
-    1. customSSH Not Recognized
+    1. customSFTP Not Recognized
 
     -   Symptom:
 
     ```powershell
-    customSSH: The term 'customSSH' is not recognized as a name of a cmdlet, function, script file, or executable program.
+    customSFTP: The term 'customSFTP' is not recognized as a name of a cmdlet, function, script file, or executable program.
     ```
 
     -   Solution:
@@ -448,7 +448,7 @@ Deploying your application using CustomSftpTool is seamless once you've set up y
     -   Use Quotation Marks:
 
     ```powershell
-    customSSH --edit-profile "Profile Name"
+    customSFTP --edit-profile "Profile Name"
     ```
 
     3. Compiler Warnings
