@@ -6,25 +6,6 @@ namespace CustomSftpTool
 {
     internal class Program
     {
-        // // Connection info
-        // private static readonly string Host = @"193.230.3.37";
-        // private static readonly string UserName = "iciadmin";
-        // private static readonly string PrivateKeyPath = @"C:\Users\admin\.ssh\id_rsa"; // Updated path to OpenSSH key
-
-        // // Define your local and remote directories
-        // private static readonly string CsprojPath = @"C:\Users\admin\Desktop\CdM\CdM\CdM.csproj";
-        // private static readonly string LocalDir = @"C:\Users\admin\Desktop\CdMDeploy";
-        // private static readonly string RemoteDir = "/var/www/case";
-        // private static readonly string ServiceName = "case";
-
-        // Define exclusions relative to the local directory
-        // private static readonly List<string> Exclusions =
-        // [
-        //     "appsettings.json",
-        //     "appsettings.Development.json",
-        //     "wwwroot\\Files"
-        // ];
-
         public static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
