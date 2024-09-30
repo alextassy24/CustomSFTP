@@ -358,7 +358,7 @@ Managing deployment profiles is straightforward with CustomSftpTool. Each profil
     customSSH --remove-profile "Profile Name"
     ```
 
-**Example:**
+    **Example:**
 
     ```powershell
     customSSH --remove-profile "Profile Name"

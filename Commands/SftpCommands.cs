@@ -31,30 +31,26 @@ namespace CustomSftpTool.Commands
                         return true;
                     }
 
-                    using (
-                        ProgressBar progressBar =
-                            new(
-                                totalFiles,
-                                "Uploading files...",
-                                new ProgressBarOptions
-                                {
-                                    ForegroundColor = ConsoleColor.Green,
-                                    ForegroundColorDone = ConsoleColor.DarkGreen,
-                                    BackgroundColor = ConsoleColor.DarkGray,
-                                    ProgressCharacter = '─'
-                                }
-                            )
-                    )
+                    using ProgressBar progressBar =
+                        new(
+                            totalFiles,
+                            "Uploading files...",
+                            new ProgressBarOptions
+                            {
+                                ForegroundColor = ConsoleColor.Green,
+                                ForegroundColorDone = ConsoleColor.DarkGreen,
+                                BackgroundColor = ConsoleColor.DarkGray,
+                                ProgressCharacter = '─'
+                            }
+                        );
+                    foreach (KeyValuePair<string, string> filePair in filesToUpload)
                     {
-                        foreach (KeyValuePair<string, string> filePair in filesToUpload)
-                        {
-                            string localFile = filePair.Key;
-                            string remoteFile = filePair.Value;
+                        string localFile = filePair.Key;
+                        string remoteFile = filePair.Value;
 
-                            using FileStream fileStream = File.OpenRead(localFile);
-                            sftpClient.UploadFile(fileStream, remoteFile, true);
-                            progressBar.Tick($"Uploaded: {Path.GetFileName(localFile)}");
-                        }
+                        using FileStream fileStream = File.OpenRead(localFile);
+                        sftpClient.UploadFile(fileStream, remoteFile, true);
+                        progressBar.Tick($"Uploaded: {Path.GetFileName(localFile)}");
                     }
                 }
                 catch (Exception ex)
@@ -116,7 +112,7 @@ namespace CustomSftpTool.Commands
             List<string> exclusions
         )
         {
-            List<KeyValuePair<string, string>> filesToUpload = new();
+            List<KeyValuePair<string, string>> filesToUpload = [];
 
             string[] files = Directory.GetFiles(localPath);
             foreach (string file in files)

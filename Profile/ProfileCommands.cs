@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using CustomSftpTool.Commands;
+using CustomSftpTool.Data;
 using CustomSftpTool.Models;
 using Renci.SshNet;
 using Serilog;
@@ -92,23 +93,25 @@ namespace CustomSftpTool.Profile
                     Console.Write($"{message}: ");
                 }
 
-                var input = Console.ReadLine();
+                string? input = Console.ReadLine();
                 if (string.IsNullOrEmpty(input))
                 {
                     if (isRequired && string.IsNullOrEmpty(defaultValue))
                     {
-                        Console.WriteLine($"{message} is required.");
+                        Message.Display($"{message} is required.", MessageType.Error);
                         continue;
                     }
-                    return defaultValue;
+                    else if (!string.IsNullOrEmpty(defaultValue))
+                        return defaultValue;
                 }
-                return input;
+                return input ?? string.Empty;
             }
         }
 
-        public static List<string> PromptForExcludedFiles(List<string> existingExclusions = null)
+        public static List<string> PromptForExcludedFiles(List<string>? existingExclusions = null)
         {
             var exclusions = existingExclusions ?? [];
+
             Console.WriteLine("Enter files or directories to exclude (leave empty to finish):");
             Console.WriteLine("Current exclusions:");
             foreach (var exclusion in exclusions)
@@ -120,7 +123,7 @@ namespace CustomSftpTool.Profile
 
             while (true)
             {
-                Console.Write("Exclude: ");
+                Message.Display("Exclude: ", MessageType.Debug);
                 var input = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(input))
                 {
@@ -168,7 +171,7 @@ namespace CustomSftpTool.Profile
             if (profile != null)
             {
                 Console.WriteLine("Showing profile data:");
-                Console.WriteLine("-------------------------------------");
+                Message.Display("-------------------------------------", MessageType.Warning);
                 Console.WriteLine($"Name = {profile.Name}");
                 Console.WriteLine($"Host = {profile.Host}");
                 Console.WriteLine($"UserName = {profile.UserName}");
@@ -179,17 +182,17 @@ namespace CustomSftpTool.Profile
                 Console.WriteLine($"ServiceName = {profile.ServiceName}");
                 if (profile.ExcludedFiles != null && profile.ExcludedFiles.Count > 0)
                 {
-                    Console.WriteLine("Excluded Files:");
+                    Message.Display("Excluded Files:", MessageType.Debug);
                     foreach (var file in profile.ExcludedFiles)
                     {
-                        Console.WriteLine($"- {file}");
+                        Message.Display($"- {file}", MessageType.Debug);
                     }
                 }
-                Console.WriteLine("-------------------------------------");
+                Message.Display("-------------------------------------", MessageType.Warning);
             }
             else
             {
-                Console.WriteLine("Profile could not be found!");
+                Message.Display("Profile could not be found!", MessageType.Error);
             }
         }
 
@@ -209,12 +212,14 @@ namespace CustomSftpTool.Profile
         public static void ListProfiles()
         {
             var profileNames = GetAllProfiles();
+            Message.Display("-------------------------------------", MessageType.Warning);
             Console.WriteLine("Available Profiles:");
             foreach (var profileName in profileNames)
             {
-                Console.WriteLine(profileName);
+                Message.Display($"- {profileName}", MessageType.Success);
             }
-            Console.WriteLine("");
+
+            Message.Display("-------------------------------------", MessageType.Warning);
         }
 
         public static void EditProfile(string profileName)
@@ -222,7 +227,7 @@ namespace CustomSftpTool.Profile
             var existingProfile = LoadProfile(profileName);
             if (existingProfile == null)
             {
-                Console.WriteLine($"Error: Profile '{profileName}' not found.");
+                Message.Display($"Error: Profile '{profileName}' not found.", MessageType.Error);
                 return;
             }
 
@@ -236,8 +241,9 @@ namespace CustomSftpTool.Profile
                 // Check if a profile with the new name already exists
                 if (LoadProfile(updatedProfile.Name) != null)
                 {
-                    Console.WriteLine(
-                        $"Error: A profile with the name '{updatedProfile.Name}' already exists."
+                    Message.Display(
+                        $"Error: A profile with the name '{updatedProfile.Name}' already exists.",
+                        MessageType.Error
                     );
                     return;
                 }
@@ -249,7 +255,7 @@ namespace CustomSftpTool.Profile
                 var response = Console.ReadLine();
                 if (!string.Equals(response, "y", StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine("Profile renaming canceled.");
+                    Message.Display($"Profile renaming canceled.", MessageType.Warning);
                     return;
                 }
 
@@ -261,20 +267,27 @@ namespace CustomSftpTool.Profile
                 try
                 {
                     File.Move(oldProfilePath, newProfilePath);
-                    Console.WriteLine(
-                        $"Profile renamed from '{profileName}' to '{updatedProfile.Name}'."
+                    Message.Display(
+                        $"Profile renamed from '{profileName}' to '{updatedProfile.Name}'.",
+                        MessageType.Success
                     );
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error renaming profile file: {ex.Message}");
+                    Message.Display(
+                        $"Error renaming profile file: {ex.Message}",
+                        MessageType.Error
+                    );
                     return;
                 }
             }
 
             // Save the updated profile data
             SaveProfile(updatedProfile.Name, updatedProfile);
-            Console.WriteLine($"Profile '{updatedProfile.Name}' updated successfully.");
+            Message.Display(
+                $"Profile '{updatedProfile.Name}' updated successfully.",
+                MessageType.Success
+            );
         }
 
         public static void RemoveProfile(string profile)
@@ -286,25 +299,28 @@ namespace CustomSftpTool.Profile
                 if (File.Exists(profilePath))
                 {
                     File.Delete(profilePath);
-                    Console.WriteLine($"Profile '{profile}' deleted successfully.");
+                    Message.Display(
+                        $"Profile '{profile}' deleted successfully.",
+                        MessageType.Success
+                    );
                 }
                 else
                 {
-                    Console.WriteLine($"Profile '{profile}' not found.");
+                    Message.Display($"Profile '{profile}' not found.", MessageType.Error);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting profile: {ex.Message}");
+                Message.Display($"Error deleting profile: {ex.Message}", MessageType.Error);
             }
         }
 
         public static async Task DeployUsingProfile(string profileName)
         {
-            var profile = ProfileCommands.LoadProfile(profileName);
+            var profile = LoadProfile(profileName);
             if (profile == null)
             {
-                Console.WriteLine($"Error: Profile '{profileName}' not found.");
+                Message.Display($"Error: Profile '{profileName}' not found.", MessageType.Error);
                 return;
             }
 
@@ -411,7 +427,7 @@ namespace CustomSftpTool.Profile
                     sftpClient,
                     profile.LocalDir,
                     profile.RemoteDir,
-                    profile.ExcludedFiles ?? new List<string>()
+                    profile.ExcludedFiles ?? []
                 );
 
                 sftpClient.Disconnect();
@@ -454,7 +470,7 @@ namespace CustomSftpTool.Profile
                 if (serviceStatus != null && serviceStatus.Trim() == "active")
                 {
                     Log.Information($"Service {profile.ServiceName} is active again.");
-                    Log.Information("Deployment completed successfully!");
+                    Log.Information(ConsoleColors.Green("Deployment completed successfully!"));
                 }
                 else
                 {

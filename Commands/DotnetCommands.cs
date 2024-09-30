@@ -7,14 +7,14 @@ namespace CustomSftpTool.Commands
     {
         public static async Task<bool> PublishApplicationAsync(string csprojPath, string outputPath)
         {
-            (bool Success, string Error) result = await RunProcessAsync(
+            (bool Success, string Error) = await RunProcessAsync(
                 "dotnet",
                 $"publish \"{csprojPath}\" -c Release -o \"{outputPath}\""
             );
 
-            if (!result.Success)
+            if (!Success)
             {
-                Log.Error($"Error publishing application: {result.Error}");
+                Log.Error($"Error publishing application: {Error}");
                 return false;
             }
 
@@ -23,14 +23,14 @@ namespace CustomSftpTool.Commands
 
         public static async Task<bool> CleanApplicationAsync(string csprojPath)
         {
-            (bool Success, string Error) result = await RunProcessAsync(
+            (bool Success, string Error) = await RunProcessAsync(
                 "dotnet",
                 $"clean \"{csprojPath}\""
             );
 
-            if (!result.Success)
+            if (!Success)
             {
-                Log.Error($"Error cleaning application: {result.Error}");
+                Log.Error($"Error cleaning application: {Error}");
                 return false;
             }
 

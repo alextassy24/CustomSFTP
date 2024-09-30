@@ -153,11 +153,16 @@ artifacts/
 *.vspscc
 *.vssscc
 
-# Build directories
+# Ignore build output directories
 bin/
 obj/
-publish/
+
+# Ignore logs
 logs/
+
+# Ignore publish output
+publish/
+
 
 # ASP.NET generated files
 wwwroot/

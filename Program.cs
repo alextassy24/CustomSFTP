@@ -1,30 +1,14 @@
-﻿using CustomSftpTool.Models;
+﻿using CustomSftpTool.Commands;
+using CustomSftpTool.Data;
+using CustomSftpTool.Models;
 using CustomSftpTool.Profile;
+using Renci.SshNet;
 using Serilog;
 
 namespace CustomSftpTool
 {
     internal class Program
     {
-        // // Connection info
-        // private static readonly string Host = @"193.230.3.37";
-        // private static readonly string UserName = "iciadmin";
-        // private static readonly string PrivateKeyPath = @"C:\Users\admin\.ssh\id_rsa"; // Updated path to OpenSSH key
-
-        // // Define your local and remote directories
-        // private static readonly string CsprojPath = @"C:\Users\admin\Desktop\CdM\CdM\CdM.csproj";
-        // private static readonly string LocalDir = @"C:\Users\admin\Desktop\CdMDeploy";
-        // private static readonly string RemoteDir = "/var/www/case";
-        // private static readonly string ServiceName = "case";
-
-        // Define exclusions relative to the local directory
-        // private static readonly List<string> Exclusions =
-        // [
-        //     "appsettings.json",
-        //     "appsettings.Development.json",
-        //     "wwwroot\\Files"
-        // ];
-
         public static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
@@ -61,9 +45,13 @@ namespace CustomSftpTool
                         }
                         else
                         {
-                            Console.WriteLine("Error: Missing profile name.");
-                            Console.WriteLine("Usage: customSSH --deploy <ProfileName>");
+                            Message.Display("Error: Missing profile name.", MessageType.Error);
+                            Message.Display(
+                                "Usage: customSFTP --deploy <ProfileName>",
+                                MessageType.Warning
+                            );
                         }
+
                         break;
                     case "--add-profile":
                         ProfileCommands.AddProfile();
@@ -72,51 +60,40 @@ namespace CustomSftpTool
                         ProfileCommands.ListProfiles();
                         break;
                     case "--show-profile":
-                        if (!string.IsNullOrEmpty(profileName))
-                        {
-                            ProfileData? profile = ProfileCommands.LoadProfile(profileName);
-                            if (profile != null)
-                                ProfileCommands.ShowProfile(profile);
-                            else
-                            {
-                                Console.WriteLine(
-                                    $"Error: Profile '{profileName}' could not be found."
-                                );
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Error: Missing profile name.");
-                            Console.WriteLine("Usage: customSSH --show-profile <ProfileName>");
-                        }
+                        CheckProfileName(ShowProfile, profileName, "--show-profile");
                         break;
                     case "--edit-profile":
-                        if (!string.IsNullOrEmpty(profileName))
-                        {
-                            ProfileCommands.EditProfile(profileName);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Error: Missing profile name.");
-                            Console.WriteLine("Usage: customSSH --edit-profile <ProfileName>");
-                        }
+                        CheckProfileName(
+                            ProfileCommands.EditProfile,
+                            profileName,
+                            "--edit-profile"
+                        );
                         break;
                     case "--remove-profile":
-                        if (!string.IsNullOrEmpty(profileName))
-                        {
-                            ProfileCommands.RemoveProfile(profileName);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Error: Missing profile name.");
-                            Console.WriteLine("Usage: customSSH --remove-profile <ProfileName>");
-                        }
+                        CheckProfileName(
+                            ProfileCommands.RemoveProfile,
+                            profileName,
+                            "--remove-profile"
+                        );
+                        break;
+                    case "--stop-service":
+                        ExecuteServiceCommand(profileName, "stop");
+                        break;
+                    case "--start-service":
+                        ExecuteServiceCommand(profileName, "start");
+                        break;
+                    case "--restart-service":
+                        ExecuteServiceCommand(profileName, "restart");
+                        break;
+                    case "--check-service":
+                        ExecuteServiceCommand(profileName, "is-active");
                         break;
                     case "--help":
                         ShowHelp();
                         break;
                     default:
-                        Console.WriteLine($"Unknown command: {command}");
+                        Console.WriteLine();
+                        Message.Display($"Unknown command: {command}", MessageType.Warning);
                         ShowHelp();
                         break;
                 }
@@ -124,7 +101,7 @@ namespace CustomSftpTool
             catch (Exception ex)
             {
                 Log.Fatal(ex, "An unhandled exception occurred.");
-                Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+                Message.Display($"An unexpected error occurred: {ex.Message}", MessageType.Error);
             }
             finally
             {
@@ -134,13 +111,13 @@ namespace CustomSftpTool
 
         public static void ShowHelp()
         {
-            Console.WriteLine("Description:");
+            Message.Display("Description:", MessageType.Warning);
             Console.WriteLine("  Custom SFTP Deployment Tool");
 
-            Console.WriteLine("\nUsage:");
-            Console.WriteLine("  customSSH [command] [options]");
+            Message.Display("\nUsage:", MessageType.Warning);
+            Console.WriteLine("  customSFTP [command] [options]");
 
-            Console.WriteLine("\nCommands:");
+            Message.Display("\nCommands:", MessageType.Warning);
             PrintOption("--deploy <ProfileName>", "Deploy using a profile");
             PrintOption("--add-profile", "Add a new profile");
             PrintOption("--list-profiles", "List all available profiles");
@@ -149,8 +126,9 @@ namespace CustomSftpTool
             PrintOption("--remove-profile <ProfileName>", "Remove a profile");
             PrintOption("--help", "Show help and usage information");
 
-            Console.WriteLine(
-                "\nOptions (for use with commands like --add-profile or --edit-profile):"
+            Message.Display(
+                "\nOptions (for use with commands like --add-profile or --edit-profile):",
+                MessageType.Warning
             );
             PrintOption("--host <host>", "The SSH host");
             PrintOption("--username <username>", "The SSH username");
@@ -164,6 +142,82 @@ namespace CustomSftpTool
         private static void PrintOption(string option, string description)
         {
             Console.WriteLine($"  {option, -35} {description}");
+        }
+
+        private static void ExecuteServiceCommand(string profileName, string action)
+        {
+            if (!string.IsNullOrEmpty(profileName))
+            {
+                var profile = ProfileCommands.LoadProfile(profileName);
+                if (profile != null)
+                {
+                    ExecuteSystemCtlCommand(profile, action);
+                }
+                else
+                {
+                    Message.Display(
+                        $"Error: Profile '{profileName}' could not be found.",
+                        MessageType.Error
+                    );
+                }
+            }
+            else
+            {
+                Message.Display("Error: Missing profile name.", MessageType.Error);
+                Message.Display(
+                    $"Usage: customSFTP --{action}-service <ProfileName>",
+                    MessageType.Warning
+                );
+            }
+        }
+
+        private static void ExecuteSystemCtlCommand(ProfileData profile, string action)
+        {
+            using SshClient sshClient = SshCommands.CreateSshClient(
+                profile.Host,
+                profile.UserName,
+                profile.PrivateKeyPath
+            );
+
+            sshClient.Connect();
+            SshCommands.ExecuteCommand(sshClient, $"sudo systemctl {action} {profile.ServiceName}");
+            sshClient.Disconnect();
+        }
+
+        private static void CheckProfileName(
+            Action<string> action,
+            string profileName,
+            string commandName
+        )
+        {
+            if (!string.IsNullOrEmpty(profileName))
+            {
+                action(profileName);
+            }
+            else
+            {
+                Message.Display("Error: Missing profile name.", MessageType.Error);
+                Message.Display(
+                    $"Usage: customSFTP {commandName} <ProfileName>",
+                    MessageType.Warning
+                );
+            }
+        }
+
+        private static void ShowProfile(string profileName)
+        {
+            ProfileData? profile = ProfileCommands.LoadProfile(profileName);
+            if (profile != null)
+            {
+                ProfileCommands.ShowProfile(profile);
+            }
+            else
+            {
+                Message.Display(
+                    $"Error: Profile '{profileName}' could not be found.",
+                    MessageType.Error
+                );
+            }
         }
     }
 }
