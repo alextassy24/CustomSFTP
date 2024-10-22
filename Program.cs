@@ -29,11 +29,12 @@ namespace CustomSftpTool
 
                 string command = args[0].ToLower();
                 string profileName = string.Empty;
+                bool force = args.Contains("--force");
 
                 // Combine all arguments after the command into a single profile name
                 if (args.Length > 1)
                 {
-                    profileName = string.Join(' ', args.Skip(1));
+                    profileName = string.Join(' ', args.Skip(1).Where(arg => arg != "--force"));
                 }
 
                 switch (command)
@@ -41,13 +42,13 @@ namespace CustomSftpTool
                     case "--deploy":
                         if (!string.IsNullOrEmpty(profileName))
                         {
-                            await ProfileCommands.DeployUsingProfile(profileName);
+                            await ProfileCommands.DeployUsingProfile(profileName, force);
                         }
                         else
                         {
                             Message.Display("Error: Missing profile name.", MessageType.Error);
                             Message.Display(
-                                "Usage: customSFTP --deploy <ProfileName>",
+                                "Usage: customSFTP --deploy <ProfileName> [--force]",
                                 MessageType.Warning
                             );
                         }
@@ -87,6 +88,9 @@ namespace CustomSftpTool
                         break;
                     case "--check-service":
                         ExecuteServiceCommand(profileName, "is-active");
+                        break;
+                    case "--status-service":
+                        ExecuteServiceCommand(profileName, "status");
                         break;
                     case "--help":
                         ShowHelp();

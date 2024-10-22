@@ -24,6 +24,7 @@ namespace CustomSftpTool.Profile
                 existingProfile.Name = Prompt("Profile Name", existingProfile.Name, true);
                 existingProfile.Host = Prompt("Host", existingProfile.Host, true);
                 existingProfile.UserName = Prompt("Username", existingProfile.UserName, true);
+                existingProfile.Password = Prompt("Password", existingProfile.Password, true);
                 existingProfile.PrivateKeyPath = Prompt(
                     "Private Key Path",
                     existingProfile.PrivateKeyPath,
@@ -61,6 +62,7 @@ namespace CustomSftpTool.Profile
             profileData.Name = Prompt("Profile Name", profileData.Name, true);
             profileData.Host = Prompt("Host", profileData.Host, true);
             profileData.UserName = Prompt("Username", profileData.UserName, true);
+            profileData.Password = Prompt("Password", profileData.Password, true);
             profileData.PrivateKeyPath = Prompt(
                 "Private Key Path",
                 profileData.PrivateKeyPath,
@@ -315,7 +317,7 @@ namespace CustomSftpTool.Profile
             }
         }
 
-        public static async Task DeployUsingProfile(string profileName)
+        public static async Task DeployUsingProfile(string profileName, bool force = false)
         {
             var profile = LoadProfile(profileName);
             if (profile == null)
@@ -325,10 +327,10 @@ namespace CustomSftpTool.Profile
             }
 
             // Call your deployment logic here, passing the profile data
-            await RunDeployment(profile);
+            await RunDeployment(profile, force);
         }
 
-        public static async Task RunDeployment(ProfileData profile)
+        public static async Task RunDeployment(ProfileData profile, bool force = false)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -382,6 +384,7 @@ namespace CustomSftpTool.Profile
                 using SshClient sshClient = SshCommands.CreateSshClient(
                     profile.Host,
                     profile.UserName,
+                    profile.Password,
                     profile.PrivateKeyPath
                 );
 
@@ -427,7 +430,8 @@ namespace CustomSftpTool.Profile
                     sftpClient,
                     profile.LocalDir,
                     profile.RemoteDir,
-                    profile.ExcludedFiles ?? []
+                    profile.ExcludedFiles ?? [],
+                    force
                 );
 
                 sftpClient.Disconnect();

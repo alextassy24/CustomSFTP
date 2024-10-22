@@ -1,6 +1,6 @@
 # CustomSftpTool
 
-**CustomSftpTool** is a powerful command-line tool designed to manage deployment profiles and automate deployments via SSH and SFTP. With this tool, you can effortlessly add, edit, list, and deploy profiles, streamlining your deployment workflow.
+**CustomSftpTool** is a powerful command-line tool designed to manage deployment profiles and automate deployments via SSH and SFTP of .NET projects hosten on Linux servers. With this tool, you can effortlessly add, edit, list, and deploy profiles, streamlining your deployment workflow.
 
 ---
 

@@ -10,7 +10,8 @@ namespace CustomSftpTool.Commands
             SftpClient sftpClient,
             string localPath,
             string remotePath,
-            List<string> exclusions
+            List<string> exclusions,
+            bool force = false
         )
         {
             return Task.Run(() =>
@@ -21,7 +22,8 @@ namespace CustomSftpTool.Commands
                         sftpClient,
                         localPath,
                         remotePath,
-                        exclusions
+                        exclusions,
+                        force
                     );
                     int totalFiles = filesToUpload.Count;
 
@@ -65,10 +67,26 @@ namespace CustomSftpTool.Commands
 
         private static bool ShouldExclude(string relativePath, List<string> exclusions)
         {
+            relativePath = relativePath.Replace("\\", "/").TrimEnd('/');
             foreach (string exclusion in exclusions)
             {
-                if (relativePath.StartsWith(exclusion, StringComparison.OrdinalIgnoreCase))
+                string normalizedExclusion = exclusion.Replace("\\", "/").TrimEnd('/');
+                // Log.Debug(
+                //     $"Checking if '{relativePath}' should be excluded against '{normalizedExclusion}'"
+                // );
+                if (
+                    relativePath.Equals(normalizedExclusion, StringComparison.OrdinalIgnoreCase)
+                    || relativePath.StartsWith(
+                        normalizedExclusion + "/",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    || relativePath.Contains(
+                        normalizedExclusion,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                 {
+                    // Log.Debug($"Excluding: {relativePath}");
                     return true;
                 }
             }
@@ -78,9 +96,15 @@ namespace CustomSftpTool.Commands
         private static bool NeedsUpload(
             SftpClient sftp,
             string localFilePath,
-            string remoteFilePath
+            string remoteFilePath,
+            bool force = false
         )
         {
+            if (force)
+            {
+                return true;
+            }
+
             if (!sftp.Exists(remoteFilePath))
             {
                 return true; // Remote file does not exist
@@ -97,62 +121,34 @@ namespace CustomSftpTool.Commands
                 return true;
             }
 
-            if (localFileInfo.LastWriteTimeUtc > remoteFileInfo.LastWriteTime)
-            {
-                return true;
-            }
-
-            return false;
+            return localFileInfo.LastWriteTimeUtc > remoteFileInfo.LastWriteTime;
         }
 
         private static List<KeyValuePair<string, string>> GetFilesToUpload(
             SftpClient sftpClient,
             string localPath,
             string remotePath,
-            List<string> exclusions
+            List<string> exclusions,
+            bool force = false
         )
         {
             List<KeyValuePair<string, string>> filesToUpload = [];
 
-            string[] files = Directory.GetFiles(localPath);
+            string[] files = Directory.GetFiles(localPath, "*", SearchOption.AllDirectories);
             foreach (string file in files)
             {
-                string relativePath = Path.GetRelativePath(localPath, file);
+                string relativePath = Path.GetRelativePath(localPath, file).Replace("\\", "/");
                 if (ShouldExclude(relativePath, exclusions))
+                {
                     continue;
+                }
 
-                string remoteFileName = Path.Combine(remotePath, Path.GetFileName(file))
-                    .Replace("\\", "/");
+                string remoteFileName = Path.Combine(remotePath, relativePath).Replace("\\", "/");
 
-                if (NeedsUpload(sftpClient, file, remoteFileName))
+                if (NeedsUpload(sftpClient, file, remoteFileName, force))
                 {
                     filesToUpload.Add(new KeyValuePair<string, string>(file, remoteFileName));
                 }
-            }
-
-            string[] directories = Directory.GetDirectories(localPath);
-            foreach (string directory in directories)
-            {
-                string dirName = Path.GetFileName(directory);
-                string relativePath = Path.GetRelativePath(localPath, directory);
-
-                if (ShouldExclude(relativePath, exclusions))
-                    continue;
-
-                string remoteDir = Path.Combine(remotePath, dirName).Replace("\\", "/");
-                if (!sftpClient.Exists(remoteDir))
-                {
-                    sftpClient.CreateDirectory(remoteDir);
-                    Log.Debug($"Created remote directory: {remoteDir}");
-                }
-
-                List<KeyValuePair<string, string>> subFiles = GetFilesToUpload(
-                    sftpClient,
-                    directory,
-                    remoteDir,
-                    exclusions
-                );
-                filesToUpload.AddRange(subFiles);
             }
 
             return filesToUpload;

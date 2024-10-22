@@ -5,14 +5,33 @@ namespace CustomSftpTool.Commands
 {
     public static class SshCommands
     {
-        public static SshClient CreateSshClient(string host, string username, string privateKeyPath)
+        public static SshClient CreateSshClient(
+            string host,
+            string username,
+            string? password = null,
+            string? privateKeyPath = null
+        )
         {
             try
             {
-                PrivateKeyFile keyFile = new(privateKeyPath);
-                PrivateKeyAuthenticationMethod keyAuth = new(username, keyFile);
-                ConnectionInfo connectionInfo = new(host, username, keyAuth);
+                AuthenticationMethod authMethod;
+                if (!string.IsNullOrEmpty(password))
+                {
+                    authMethod = new PasswordAuthenticationMethod(username, password);
+                }
+                else if (!string.IsNullOrEmpty(privateKeyPath))
+                {
+                    PrivateKeyFile keyFile = new(privateKeyPath);
+                    authMethod = new PrivateKeyAuthenticationMethod(username, keyFile);
+                }
+                else
+                {
+                    throw new ArgumentException(
+                        "Either password or private key path must be provided."
+                    );
+                }
 
+                ConnectionInfo connectionInfo = new(host, username, authMethod);
                 return new SshClient(connectionInfo);
             }
             catch (Exception ex)
