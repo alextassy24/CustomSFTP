@@ -43,7 +43,6 @@ namespace CustomSftpTool.Commands
         )
         {
             TaskCompletionSource<(bool, string)> tcs = new();
-
             ProcessStartInfo processStartInfo =
                 new()
                 {
@@ -53,9 +52,7 @@ namespace CustomSftpTool.Commands
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
-
             Process process = new() { StartInfo = processStartInfo, EnableRaisingEvents = true };
-
             string error = string.Empty;
 
             process.ErrorDataReceived += (sender, e) =>
@@ -72,7 +69,6 @@ namespace CustomSftpTool.Commands
                 process.Dispose();
                 tcs.SetResult((success, error));
             };
-
             process.Start();
             process.BeginErrorReadLine();
 

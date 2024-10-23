@@ -25,9 +25,8 @@ namespace CustomSftpTool.Commands
                         exclusions,
                         force
                     );
-                    int totalFiles = filesToUpload.Count;
 
-                    if (totalFiles == 0)
+                    if (filesToUpload.Count == 0)
                     {
                         Log.Information("No files to upload.");
                         return true;
@@ -35,7 +34,7 @@ namespace CustomSftpTool.Commands
 
                     using ProgressBar progressBar =
                         new(
-                            totalFiles,
+                            filesToUpload.Count,
                             "Uploading files...",
                             new ProgressBarOptions
                             {
@@ -45,6 +44,7 @@ namespace CustomSftpTool.Commands
                                 ProgressCharacter = '─'
                             }
                         );
+
                     foreach (KeyValuePair<string, string> filePair in filesToUpload)
                     {
                         string localFile = filePair.Key;
@@ -71,9 +71,6 @@ namespace CustomSftpTool.Commands
             foreach (string exclusion in exclusions)
             {
                 string normalizedExclusion = exclusion.Replace("\\", "/").TrimEnd('/');
-                // Log.Debug(
-                //     $"Checking if '{relativePath}' should be excluded against '{normalizedExclusion}'"
-                // );
                 if (
                     relativePath.Equals(normalizedExclusion, StringComparison.OrdinalIgnoreCase)
                     || relativePath.StartsWith(
@@ -86,7 +83,6 @@ namespace CustomSftpTool.Commands
                     )
                 )
                 {
-                    // Log.Debug($"Excluding: {relativePath}");
                     return true;
                 }
             }

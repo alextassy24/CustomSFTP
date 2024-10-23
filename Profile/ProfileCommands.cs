@@ -20,7 +20,7 @@ namespace CustomSftpTool.Profile
         {
             if (existingProfile != null)
             {
-                Console.WriteLine("Update profile data(enter for default value): ");
+                Message.Display("Update profile data(enter for default value): ", MessageType.Info);
                 existingProfile.Name = Prompt("Profile Name", existingProfile.Name, true);
                 existingProfile.Host = Prompt("Host", existingProfile.Host, true);
                 existingProfile.UserName = Prompt("Username", existingProfile.UserName, true);
@@ -58,7 +58,7 @@ namespace CustomSftpTool.Profile
             }
 
             var profileData = new ProfileData();
-            Console.WriteLine("Introduce profile data: ");
+            Message.Display("Introduce profile data(Press CTRL + C to exit): ", MessageType.Info);
             profileData.Name = Prompt("Profile Name", profileData.Name, true);
             profileData.Host = Prompt("Host", profileData.Host, true);
             profileData.UserName = Prompt("Username", profileData.UserName, true);
@@ -72,8 +72,10 @@ namespace CustomSftpTool.Profile
             profileData.LocalDir = Prompt("Local Directory", profileData.LocalDir, true);
             profileData.RemoteDir = Prompt("Remote Directory", profileData.RemoteDir, true);
             profileData.ServiceName = Prompt("Service Name", profileData.ServiceName, true);
-            // After other prompts
             profileData.ExcludedFiles = PromptForExcludedFiles();
+            profileData.LastBackup = "";
+            profileData.LastRestore = "";
+            profileData.LastDeploy = "";
 
             return profileData;
         }
@@ -86,15 +88,7 @@ namespace CustomSftpTool.Profile
         {
             while (true)
             {
-                if (!string.IsNullOrEmpty(defaultValue))
-                {
-                    Console.Write($"{message} [{defaultValue}]: ");
-                }
-                else
-                {
-                    Console.Write($"{message}: ");
-                }
-
+                Console.Write($"{message} [{defaultValue ?? null}]: ");
                 string? input = Console.ReadLine();
                 if (string.IsNullOrEmpty(input))
                 {
@@ -120,7 +114,6 @@ namespace CustomSftpTool.Profile
             {
                 Console.WriteLine($"- {exclusion}");
             }
-
             Console.WriteLine("Add new exclusions (leave empty to finish):");
 
             while (true)
@@ -163,6 +156,7 @@ namespace CustomSftpTool.Profile
             {
                 return null;
             }
+
             var json = File.ReadAllText(profilePath);
             var profileData = JsonSerializer.Deserialize<ProfileData>(json);
             return profileData;
@@ -182,32 +176,37 @@ namespace CustomSftpTool.Profile
                 Console.WriteLine($"LocalDir = {profile.LocalDir}");
                 Console.WriteLine($"RemoteDir = {profile.RemoteDir}");
                 Console.WriteLine($"ServiceName = {profile.ServiceName}");
+                Console.WriteLine($"Last Deploy = {profile.LastDeploy}");
+                Console.WriteLine($"Last Backup = {profile.LastBackup}");
                 if (profile.ExcludedFiles != null && profile.ExcludedFiles.Count > 0)
                 {
-                    Message.Display("Excluded Files:", MessageType.Debug);
+                    Message.Display("-------------------------------------", MessageType.Warning);
+                    Console.WriteLine($"Excluded Files:");
                     foreach (var file in profile.ExcludedFiles)
                     {
                         Message.Display($"- {file}", MessageType.Debug);
                     }
                 }
                 Message.Display("-------------------------------------", MessageType.Warning);
+                return;
             }
-            else
-            {
-                Message.Display("Profile could not be found!", MessageType.Error);
-            }
+            Message.Display("Error: Profile could not be found!", MessageType.Error);
         }
 
         public static List<string> GetAllProfiles()
         {
-            var profilesDir = GetProfilesDirectory();
-            var profileFiles = Directory.GetFiles(profilesDir, "*.json");
-            var profileNames = new List<string>();
-            foreach (var file in profileFiles)
+            string profilesDirectory = GetProfilesDirectory();
+
+            if (!Directory.Exists(profilesDirectory))
             {
-                var profileName = Path.GetFileNameWithoutExtension(file);
-                profileNames.Add(profileName);
+                return [];
             }
+
+            List<string> profileNames = Directory
+                .EnumerateFiles(profilesDirectory, "*.json")
+                .Select(file => Path.GetFileNameWithoutExtension(file))
+                .ToList();
+
             return profileNames;
         }
 
@@ -224,53 +223,198 @@ namespace CustomSftpTool.Profile
             Message.Display("-------------------------------------", MessageType.Warning);
         }
 
-        public static void EditProfile(string profileName)
+        public static void EditProfile(
+            string profileName,
+            List<string> fields,
+            Dictionary<string, string> fieldSets
+        )
         {
             var existingProfile = LoadProfile(profileName);
-            if (existingProfile == null)
+            if (existingProfile == null || string.IsNullOrEmpty(existingProfile.Name))
             {
-                Message.Display($"Error: Profile '{profileName}' not found.", MessageType.Error);
+                Message.Display(
+                    $"Error: Profile '{profileName}' could not be found.",
+                    MessageType.Error
+                );
                 return;
             }
 
-            var updatedProfile = PromptForProfileData(existingProfile);
+            bool hasFields = fields != null && fields.Count > 0;
+            bool hasFieldsets = fieldSets != null && fieldSets.Count > 0;
 
-            // Check if the profile name has been changed
-            if (
-                !string.Equals(updatedProfile.Name, profileName, StringComparison.OrdinalIgnoreCase)
-            )
+            if (hasFieldsets && fieldSets != null)
             {
-                // Check if a profile with the new name already exists
-                if (LoadProfile(updatedProfile.Name) != null)
+                try
                 {
+                    foreach (var kvp in fieldSets)
+                    {
+                        switch (kvp.Key.ToLower())
+                        {
+                            case "--name":
+                                existingProfile.Name = kvp.Value;
+                                break;
+                            case "--host":
+                                existingProfile.Host = kvp.Value;
+                                break;
+                            case "--user-name":
+                                existingProfile.UserName = kvp.Value;
+                                break;
+                            case "--password":
+                                existingProfile.Password = kvp.Value;
+                                break;
+                            case "--private-key-path":
+                                existingProfile.PrivateKeyPath = kvp.Value;
+                                break;
+                            case "--csproj-path":
+                                existingProfile.CsprojPath = kvp.Value;
+                                break;
+                            case "--local-dir":
+                                existingProfile.LocalDir = kvp.Value;
+                                break;
+                            case "--remote-dir":
+                                existingProfile.RemoteDir = kvp.Value;
+                                break;
+                            case "--service-name":
+                                existingProfile.ServiceName = kvp.Value;
+                                break;
+                        }
+                    }
+                    FileNameChange(profileName, existingProfile.Name);
+                    SaveProfile(existingProfile.Name, existingProfile);
                     Message.Display(
-                        $"Error: A profile with the name '{updatedProfile.Name}' already exists.",
-                        MessageType.Error
+                        $"Profile '{existingProfile.Name}' updated successfully.",
+                        MessageType.Success
                     );
+                }
+                catch (Exception ex)
+                {
+                    Message.Display($"Error: {ex.Message}", MessageType.Error);
                     return;
                 }
+            }
+            if (hasFields && fields != null)
+            {
+                try
+                {
+                    foreach (var field in fields)
+                    {
+                        switch (field.ToLower())
+                        {
+                            case "--name":
+                                existingProfile.Name = Prompt(
+                                    "Profile Name",
+                                    existingProfile.Name,
+                                    true
+                                );
+                                break;
+                            case "--host":
+                                existingProfile.Host = Prompt("Host", existingProfile.Host, true);
+                                break;
+                            case "--service-name":
+                                existingProfile.ServiceName = Prompt(
+                                    "Service Name",
+                                    existingProfile.ServiceName,
+                                    true
+                                );
+                                break;
+                            case "--user-name":
+                                existingProfile.UserName = Prompt(
+                                    "Username",
+                                    existingProfile.UserName,
+                                    true
+                                );
+                                break;
+                            case "--password":
+                                existingProfile.Password = Prompt(
+                                    "Password",
+                                    existingProfile.Password,
+                                    true
+                                );
+                                break;
+                            case "--private-key-path":
+                                existingProfile.PrivateKeyPath = Prompt(
+                                    "Private Key Path",
+                                    existingProfile.PrivateKeyPath,
+                                    true
+                                );
+                                break;
+                            case "--csproj-path":
+                                existingProfile.CsprojPath = Prompt(
+                                    "Csproj Path",
+                                    existingProfile.CsprojPath,
+                                    true
+                                );
+                                break;
+                            case "--local-dir":
+                                existingProfile.LocalDir = Prompt(
+                                    "Local Directory",
+                                    existingProfile.LocalDir,
+                                    true
+                                );
+                                break;
+                            case "--remote-dir":
+                                existingProfile.RemoteDir = Prompt(
+                                    "Remote Directory",
+                                    existingProfile.RemoteDir,
+                                    true
+                                );
+                                break;
+                        }
+                    }
 
-                // Ask for confirmation
+                    FileNameChange(profileName, existingProfile.Name);
+                    SaveProfile(existingProfile.Name, existingProfile);
+                    Message.Display(
+                        $"Profile '{existingProfile.Name}' updated successfully.",
+                        MessageType.Success
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Message.Display($"Error updating profile: {ex.Message}", MessageType.Error);
+                }
+            }
+
+            if (!hasFields && !hasFieldsets)
+            {
+                var updatedProfile = PromptForProfileData(existingProfile);
+                if (string.IsNullOrEmpty(updatedProfile.Name))
+                {
+                    return;
+                }
+                FileNameChange(profileName, updatedProfile.Name);
+                SaveProfile(updatedProfile.Name, updatedProfile);
+                Message.Display(
+                    $"Profile '{updatedProfile.Name}' updated successfully.",
+                    MessageType.Success
+                );
+            }
+        }
+
+        public static void FileNameChange(string oldName, string newName)
+        {
+            if (!string.Equals(newName, oldName, StringComparison.OrdinalIgnoreCase))
+            {
                 Console.WriteLine(
-                    $"Do you want to rename the profile from '{profileName}' to '{updatedProfile.Name}'? (y/n)"
+                    $"Do you want to rename the profile from '{oldName}' to '{newName}'? (y/n)"
                 );
                 var response = Console.ReadLine();
                 if (!string.Equals(response, "y", StringComparison.OrdinalIgnoreCase))
                 {
-                    Message.Display($"Profile renaming canceled.", MessageType.Warning);
+                    Message.Display("Profile renaming canceled.", MessageType.Warning);
                     return;
                 }
 
                 // Rename the JSON file
                 var profilesDir = GetProfilesDirectory();
-                var oldProfilePath = Path.Combine(profilesDir, $"{profileName}.json");
-                var newProfilePath = Path.Combine(profilesDir, $"{updatedProfile.Name}.json");
+                var oldProfilePath = Path.Combine(profilesDir, $"{oldName}.json");
+                var newProfilePath = Path.Combine(profilesDir, $"{newName}.json");
 
                 try
                 {
                     File.Move(oldProfilePath, newProfilePath);
                     Message.Display(
-                        $"Profile renamed from '{profileName}' to '{updatedProfile.Name}'.",
+                        $"Profile renamed from '{oldName}' to '{newName}'.",
                         MessageType.Success
                     );
                 }
@@ -283,13 +427,6 @@ namespace CustomSftpTool.Profile
                     return;
                 }
             }
-
-            // Save the updated profile data
-            SaveProfile(updatedProfile.Name, updatedProfile);
-            Message.Display(
-                $"Profile '{updatedProfile.Name}' updated successfully.",
-                MessageType.Success
-            );
         }
 
         public static void RemoveProfile(string profile)
@@ -305,32 +442,36 @@ namespace CustomSftpTool.Profile
                         $"Profile '{profile}' deleted successfully.",
                         MessageType.Success
                     );
+                    return;
                 }
-                else
-                {
-                    Message.Display($"Profile '{profile}' not found.", MessageType.Error);
-                }
+                Message.Display($"Error: Profile '{profile}' not found.", MessageType.Error);
             }
             catch (Exception ex)
             {
-                Message.Display($"Error deleting profile: {ex.Message}", MessageType.Error);
+                Message.Display($"Error: Deleting profile failed: {ex.Message}", MessageType.Error);
             }
         }
 
         public static async Task DeployUsingProfile(string profileName, bool force = false)
         {
             var profile = LoadProfile(profileName);
-            if (profile == null)
+            if (profile == null || profileName == null || profile.Name == null)
             {
                 Message.Display($"Error: Profile '{profileName}' not found.", MessageType.Error);
                 return;
             }
 
-            // Call your deployment logic here, passing the profile data
-            await RunDeployment(profile, force);
+            if (await RunDeployment(profile, force))
+            {
+                profile.LastDeploy = DateTime.Now.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                SaveProfile(profile.Name, profile);
+                return;
+            }
+
+            Message.Display($"Error: Deploy failed.", MessageType.Error);
         }
 
-        public static async Task RunDeployment(ProfileData profile, bool force = false)
+        public static async Task<bool> RunDeployment(ProfileData profile, bool force = false)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -342,8 +483,23 @@ namespace CustomSftpTool.Profile
 
             try
             {
-                Log.Information("Starting deployment...");
+                if (
+                    profile == null
+                    || string.IsNullOrEmpty(profile.Host)
+                    || string.IsNullOrEmpty(profile.UserName)
+                    || string.IsNullOrEmpty(profile.PrivateKeyPath)
+                    || string.IsNullOrEmpty(profile.CsprojPath)
+                    || string.IsNullOrEmpty(profile.LocalDir)
+                    || string.IsNullOrEmpty(profile.RemoteDir)
+                )
+                {
+                    Log.Error(
+                        "Profile data is null. Please check Host, UserName, PrivateKeyPath, CsprojPath, RemoteDir and LocalDir properties in the profile data."
+                    );
+                    return false;
+                }
 
+                Log.Information("Starting deployment...");
                 Stopwatch totalStopwatch = Stopwatch.StartNew();
                 Log.Information("Cleaning the application...");
                 Stopwatch cleanStopwatch = Stopwatch.StartNew();
@@ -353,9 +509,8 @@ namespace CustomSftpTool.Profile
                 if (!cleanApp)
                 {
                     Log.Error("Failed to clean the application.");
-                    return;
+                    return false;
                 }
-
                 Log.Information(
                     "Cleaning completed in {Elapsed} seconds.",
                     cleanStopwatch.Elapsed.TotalSeconds
@@ -373,7 +528,7 @@ namespace CustomSftpTool.Profile
                 if (!publishApp)
                 {
                     Log.Error("Failed to publish the application.");
-                    return;
+                    return false;
                 }
                 Log.Information(
                     "Publishing completed in {Elapsed} seconds.",
@@ -402,7 +557,7 @@ namespace CustomSftpTool.Profile
                         $"Service {profile.ServiceName} is not active or failed to check status."
                     );
                     sshClient.Disconnect();
-                    return;
+                    return false;
                 }
 
                 Log.Information($"Service {profile.ServiceName} is active.");
@@ -417,7 +572,7 @@ namespace CustomSftpTool.Profile
                 {
                     Log.Error($"Failed to stop service {profile.ServiceName}.");
                     sshClient.Disconnect();
-                    return;
+                    return false;
                 }
 
                 Log.Information($"Service {profile.ServiceName} is stopped.");
@@ -445,7 +600,7 @@ namespace CustomSftpTool.Profile
                         $"sudo systemctl start {profile.ServiceName}"
                     );
                     sshClient.Disconnect();
-                    return;
+                    return false;
                 }
 
                 Log.Information("Transferred newer files.");
@@ -459,7 +614,7 @@ namespace CustomSftpTool.Profile
                 {
                     Log.Error($"Failed to start service {profile.ServiceName}.");
                     sshClient.Disconnect();
-                    return;
+                    return false;
                 }
 
                 Log.Information($"Service {profile.ServiceName} is started.");
@@ -482,10 +637,10 @@ namespace CustomSftpTool.Profile
                 }
                 totalStopwatch.Stop();
                 Log.Information(
-                    "Deployment completed in {Elapsed} seconds.",
-                    totalStopwatch.Elapsed.TotalSeconds
+                    $"Deployment completed in {totalStopwatch.Elapsed.TotalSeconds} seconds."
                 );
                 sshClient.Disconnect();
+                return true;
             }
             catch (Exception ex)
             {
@@ -493,9 +648,9 @@ namespace CustomSftpTool.Profile
             }
             finally
             {
-                Log.Information("Deployment process finished.");
                 Log.CloseAndFlush();
             }
+            return false;
         }
     }
 }
