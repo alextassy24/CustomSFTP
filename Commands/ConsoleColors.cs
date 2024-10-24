@@ -1,4 +1,4 @@
-namespace CustomSftpTool
+namespace CustomSftpTool.Commands
 {
     public static class ConsoleColors
     {
