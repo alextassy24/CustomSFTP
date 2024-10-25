@@ -3,6 +3,7 @@ using System.Text.Json;
 using CustomSftpTool.Commands;
 using CustomSftpTool.Data;
 using CustomSftpTool.Models;
+using CustomSftpTool.Utilities;
 using Renci.SshNet;
 using Serilog;
 
