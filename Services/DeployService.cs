@@ -31,6 +31,7 @@ namespace CustomSftpTool.Services
             }
 
             Log.Information("Starting deployment...");
+            Log.Information("Cleaning the solution...");
 
             bool cleanApp = await _dotnetService.CleanApplicationAsync(profile.CsprojPath);
             if (!cleanApp)
@@ -38,7 +39,9 @@ namespace CustomSftpTool.Services
                 Log.Error("Failed to clean the application.");
                 return false;
             }
+            Log.Information("Cleaning complete!");
 
+            Log.Information("Publishing the app...");
             bool publishApp = await _dotnetService.PublishApplicationAsync(
                 profile.CsprojPath,
                 profile.LocalDir
@@ -48,15 +51,18 @@ namespace CustomSftpTool.Services
                 Log.Error("Failed to publish the application.");
                 return false;
             }
+            Log.Information("Publishing complete!");
 
             _sshService.Connect();
-            string serviceStatus = _sshService.ExecuteCommand(
-                $"sudo systemctl is-active {profile.ServiceName}"
-            );
+            string serviceStatus = _sshService
+                .ExecuteCommand($"sudo systemctl is-active {profile.ServiceName}")
+                ?.Trim();
+
+            Log.Debug($"Service status command returned: {serviceStatus}");
 
             if (serviceStatus != "active")
             {
-                Log.Error("Service is not active.");
+                Log.Error($"Expected 'active', but got '{serviceStatus}'.");
                 _sshService.Disconnect();
                 return false;
             }

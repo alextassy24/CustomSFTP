@@ -15,14 +15,14 @@ namespace CustomSftpTool.Commands.Implementations
     ) : ICommand
     {
         private readonly string _profileName = profileName;
-        private readonly ISshService _sshService = sshService;
-        private readonly ISftpService _sftpService = sftpService;
-        private readonly ILoggerService _logger = logger;
+        private ISshService _sshService = sshService;
+        private ISftpService _sftpService = sftpService;
+        private ILoggerService _logger = logger;
         private readonly IProfileManager _profileManager = profileManager;
 
         public async Task Execute()
         {
-            Models.ProfileData? profile = _profileManager.LoadProfile(_profileName);
+            var profile = _profileManager.LoadProfile(_profileName);
             if (
                 profile == null
                 || string.IsNullOrEmpty(profile.LocalDir)
@@ -110,9 +110,9 @@ namespace CustomSftpTool.Commands.Implementations
                     );
 
                     command.CommandTimeout = TimeSpan.FromMinutes(10);
-                    IAsyncResult asyncResult = command.BeginExecute();
+                    var asyncResult = command.BeginExecute();
 
-                    using (StreamReader outputReader = new StreamReader(command.OutputStream))
+                    using (var outputReader = new StreamReader(command.OutputStream))
                     {
                         string? line;
                         while (!asyncResult.IsCompleted || !outputReader.EndOfStream)

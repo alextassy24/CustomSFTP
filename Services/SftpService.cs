@@ -1,6 +1,7 @@
 using CustomSftpTool.Interfaces;
 using Renci.SshNet;
 using Serilog;
+using ShellProgressBar;
 
 namespace CustomSftpTool.Services
 {
@@ -39,13 +40,14 @@ namespace CustomSftpTool.Services
             }
         }
 
-        public async Task UploadFileAsync(string localFilePath, string remoteFilePath)
+        public async Task<string> UploadFileAsync(string localFilePath, string remoteFilePath)
         {
             try
             {
                 using FileStream fileStream = File.OpenRead(localFilePath);
                 await Task.Run(() => _sftpClient.UploadFile(fileStream, remoteFilePath, true));
-                Log.Information($"Uploaded file: {localFilePath} to {remoteFilePath}");
+                // Log.Information($"Uploaded file: {localFilePath} to {remoteFilePath}");
+                return $"Uploaded file: {localFilePath} to {remoteFilePath}";
             }
             catch (Exception ex)
             {
@@ -76,9 +78,23 @@ namespace CustomSftpTool.Services
                     return true;
                 }
 
+                using ProgressBar progressBar =
+                    new(
+                        filesToUpload.Count,
+                        "Transfering files...",
+                        new ProgressBarOptions
+                        {
+                            ForegroundColor = ConsoleColor.Cyan,
+                            ForegroundColorDone = ConsoleColor.DarkCyan,
+                            BackgroundColor = ConsoleColor.DarkGray,
+                            ProgressCharacter = '█'
+                        }
+                    );
+
                 foreach (KeyValuePair<string, string> filePair in filesToUpload)
                 {
-                    await UploadFileAsync(filePair.Key, filePair.Value);
+                    var deployFile = await UploadFileAsync(filePair.Key, filePair.Value);
+                    progressBar.Tick($"Uploading {filePair.Key}");
                 }
 
                 return true;
