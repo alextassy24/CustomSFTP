@@ -211,8 +211,45 @@ namespace CustomSftpTool.Commands.Implementations
 
         private static ProfileData PromptForProfileData(ProfileData existingProfile)
         {
-            // Logic for prompting user for data to update the profile
-            return existingProfile;
+            if (existingProfile != null)
+            {
+                Message.Display("Update profile data(enter for default value): ", MessageType.Info);
+                existingProfile.Name = Prompt("Profile Name", existingProfile.Name, true);
+                existingProfile.Host = Prompt("Host", existingProfile.Host, true);
+                existingProfile.UserName = Prompt("Username", existingProfile.UserName, true);
+                existingProfile.Password = Prompt("Password", existingProfile.Password, true);
+                existingProfile.PrivateKeyPath = Prompt(
+                    "Private Key Path",
+                    existingProfile.PrivateKeyPath,
+                    true
+                );
+                existingProfile.CsprojPath = Prompt(
+                    "Csproj Path",
+                    existingProfile.CsprojPath,
+                    true
+                );
+                existingProfile.LocalDir = Prompt(
+                    "Local Directory",
+                    existingProfile.LocalDir,
+                    true
+                );
+                existingProfile.RemoteDir = Prompt(
+                    "Remote Directory",
+                    existingProfile.RemoteDir,
+                    true
+                );
+                existingProfile.ServiceName = Prompt(
+                    "Service Name",
+                    existingProfile.ServiceName,
+                    true
+                );
+                existingProfile.ExcludedFiles = AddProfileCommand.PromptForExcludedFiles(
+                    existingProfile.ExcludedFiles
+                );
+
+                return existingProfile;
+            }
+            return new ProfileData();
         }
 
         public static void FileNameChange(string oldName, string newName)

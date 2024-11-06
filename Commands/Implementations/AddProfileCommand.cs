@@ -20,10 +20,10 @@ namespace CustomSftpTool.Commands.Implementations
             return Task.CompletedTask;
         }
 
-        private ProfileData PromptForProfileData()
+        private static ProfileData PromptForProfileData()
         {
             var profileData = new ProfileData();
-            // Add logic to prompt the user for profile data (same as in ProfileCommands.cs)
+            
             profileData.Name = Prompt("Profile Name", profileData.Name, true);
             profileData.Host = Prompt("Host", profileData.Host, true);
             profileData.UserName = Prompt("Username", profileData.UserName, true);
@@ -37,11 +37,12 @@ namespace CustomSftpTool.Commands.Implementations
             profileData.LocalDir = Prompt("Local Directory", profileData.LocalDir, true);
             profileData.RemoteDir = Prompt("Remote Directory", profileData.RemoteDir, true);
             profileData.ServiceName = Prompt("Service Name", profileData.ServiceName, true);
+            profileData.ExcludedFiles = PromptForExcludedFiles();
 
             return profileData;
         }
 
-        private string Prompt(string message, string? defaultValue = null, bool isRequired = false)
+        private static string Prompt(string message, string? defaultValue = null, bool isRequired = false)
         {
             // Logic to prompt for input
             while (true)
@@ -64,6 +65,32 @@ namespace CustomSftpTool.Commands.Implementations
 
                 return input ?? string.Empty;
             }
+        }
+
+        public static List<string> PromptForExcludedFiles(List<string>? existingExclusions = null)
+        {
+            var exclusions = existingExclusions ?? [];
+
+            Console.WriteLine("Enter files or directories to exclude (leave empty to finish):");
+            Console.WriteLine("Current exclusions:");
+            foreach (var exclusion in exclusions)
+            {
+                Console.WriteLine($"- {exclusion}");
+            }
+            Console.WriteLine("Add new exclusions (leave empty to finish):");
+
+            while (true)
+            {
+                Message.Display("Exclude: ", MessageType.Debug);
+                var input = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    break;
+                }
+                exclusions.Add(input);
+            }
+
+            return exclusions;
         }
     }
 }

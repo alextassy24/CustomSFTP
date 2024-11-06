@@ -28,6 +28,7 @@ namespace CustomSftpTool.Parsers
             string commandName = args[0].ToLower();
             var options = args.Skip(1).ToArray();
             string profileName = _profileManager.GetProfileName(options);
+            options = options.Skip(1).ToArray();
 
             switch (commandName)
             {
