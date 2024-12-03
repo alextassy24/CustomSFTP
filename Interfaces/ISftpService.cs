@@ -4,12 +4,8 @@ namespace CustomSftpTool.Interfaces
     {
         void Connect();
         void Disconnect();
-        Task<string> UploadFileAsync(string localFilePath, string remoteFilePath);
-        Task<bool> UploadDirectoryAsync(
-            string localPath,
-            string remotePath,
-            List<string> exclusions,
-            bool force = false
-        );
+        Task UploadFileAsync(string localFilePath, string remoteFilePath);
+        Task<bool> UploadDirectoryAsync(string localPath, string remotePath, List<string> exclusions, bool force = false);
+        Task DownloadFileAsync(string remoteFilePath, string localFilePath);
     }
 }

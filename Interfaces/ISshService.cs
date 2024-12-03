@@ -1,3 +1,5 @@
+using ShellProgressBar;
+
 namespace CustomSftpTool.Interfaces
 {
     public interface ISshService
@@ -5,5 +7,7 @@ namespace CustomSftpTool.Interfaces
         void Connect();
         void Disconnect();
         string? ExecuteCommand(string command);
+        int CountFilesInDirectory(string directoryPath);
+        bool CreateTarArchive(string sourceDir, string archivePath, ProgressBar progressBar);
     }
 }

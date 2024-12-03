@@ -1,39 +1,48 @@
-using CustomSftpTool.Data;
 using CustomSftpTool.Interfaces;
 using CustomSftpTool.Models;
+using System.Diagnostics;
 
 namespace CustomSftpTool.Commands.Implementations
 {
     public class DeployCommand(
         string profileName,
         bool force,
-        IProfileManager profileManager,
-        IDeployService deployService
+        IProfileService profileService,
+        IDeployService deployService,
+        IProfileValidator profileValidator,
+        ILoggerService logger
     ) : ICommand
     {
         private readonly string _profileName = profileName;
         private readonly bool _force = force;
-        private readonly IProfileManager _profileManager = profileManager;
+        private readonly IProfileService _profileService = profileService;
         private readonly IDeployService _deployService = deployService;
+        private readonly IProfileValidator _profileValidator = profileValidator;
+        private readonly ILoggerService _logger = logger;
 
         public async Task Execute()
         {
-            var profile = _profileManager.LoadProfile(_profileName);
-            if (profile == null || string.IsNullOrEmpty(profile.Name))
+            // Load and validate profile
+            var profile = _profileService.LoadProfile(_profileName);
+            if (!_profileValidator.Validate(profile, _profileName))
             {
-                Message.Display($"Error: Profile '{_profileName}' not found.", MessageType.Error);
                 return;
             }
 
-            bool success = await _deployService.RunDeploymentAsync(profile, _force);
+            Debug.Assert(profile != null, "Profile should not be null after validation");
+            Debug.Assert(profile.Name != null, "Profile name should not be null after validation");
+
+            // Run deployment
+            bool success = await _deployService.RunDeploymentAsync(profile!, _force);
             if (success)
             {
                 profile.LastDeploy = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                _profileManager.SaveProfile(profile.Name, profile);
+                _profileService.SaveProfile(profile);
+                _logger.LogInfo($"Deployment for profile '{profile.Name}' completed successfully.");
             }
             else
             {
-                Message.Display("Deployment failed.", MessageType.Error);
+                _logger.LogError("Deployment failed.");
             }
         }
     }

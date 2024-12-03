@@ -1,118 +1,171 @@
-using CustomSftpTool.Commands;
 using CustomSftpTool.Commands.Implementations;
 using CustomSftpTool.Interfaces;
 
 namespace CustomSftpTool.Parsers
 {
     public class CommandParser(
-        IProfileManager? profileManager,
-        IDeployService? deployService,
+        IProfileService profileService,
+        IDeployService deployService,
         ILoggerService logger,
-        ISshService? sshService,
-        ISftpService? sftpService
-    )
+        IProfileValidator profileValidator,
+        IProfilePromptService profilePromptService,
+        IBackupService backupService,
+        ISshServiceFactory sshServiceFactory
+    ) : ICommandParser
     {
-        private readonly IProfileManager? _profileManager = profileManager;
-        private readonly IDeployService? _deployService = deployService;
+        private readonly IProfileService _profileService = profileService;
+        private readonly IDeployService _deployService = deployService;
         private readonly ILoggerService _logger = logger;
-        private readonly ISshService? _sshService = sshService;
-        private readonly ISftpService? _sftpService = sftpService;
+        private readonly IProfileValidator _profileValidator = profileValidator;
+        private readonly IProfilePromptService _profilePromptService = profilePromptService;
+        private readonly IBackupService _backupService = backupService;
+        private readonly ISshServiceFactory _sshServiceFactory = sshServiceFactory;
 
         public ICommand? Parse(string[] args)
         {
             if (args.Length == 0)
             {
+                _logger.LogInfo("No command specified. Use 'help' to see available commands.");
                 return new HelpCommand();
             }
 
             string commandName = args[0].ToLower();
             string[] options = args.Skip(1).ToArray();
 
-            if (_profileManager == null)
+            // Handle commands requiring a profile name
+            if (
+                new[]
+                {
+                    "show-profile",
+                    "edit-profile",
+                    "remove-profile",
+                    "status-service",
+                    "check-service",
+                    "stop-service",
+                    "start-service",
+                    "restart-service",
+                    "deploy",
+                    "backup",
+                }.Contains(commandName)
+            )
             {
-                throw new InvalidOperationException("ProfileManager is not initialized.");
+                string profileName = _profileService.GetProfileName(options);
+                if (string.IsNullOrEmpty(profileName))
+                {
+                    _logger.LogError($"Profile name is required for the '{commandName}' command.");
+                    return null;
+                }
+
+                var profile = _profileService.LoadProfile(profileName);
+                if (profile == null)
+                {
+                    _logger.LogError($"Profile '{profileName}' not found.");
+                    return null;
+                }
+
+                // Handle commands with a valid profile
+                switch (commandName)
+                {
+                    case "show-profile":
+                        return new ShowProfileCommand(_profileService, profileName);
+
+                    case "edit-profile":
+                        List<string> fields = ExtractFields(options);
+                        Dictionary<string, string> fieldSets = ExtractFieldSets(options);
+                        return new EditProfileCommand(
+                            profileName,
+                            fields,
+                            fieldSets,
+                            _profileService
+                        );
+
+                    case "remove-profile":
+                        return new RemoveProfileCommand(_profileService, profileName);
+
+                    case "status-service":
+                        var sshService = _sshServiceFactory.CreateSshService(profile);
+                        return new SystemctlServiceCommand(
+                            profileName,
+                            "status",
+                            sshService,
+                            _profileService
+                        );
+
+                    case "check-service":
+                        sshService = _sshServiceFactory.CreateSshService(profile);
+                        return new SystemctlServiceCommand(
+                            profileName,
+                            "is-active",
+                            sshService,
+                            _profileService
+                        );
+
+                    case "stop-service":
+                        sshService = _sshServiceFactory.CreateSshService(profile);
+                        return new SystemctlServiceCommand(
+                            profileName,
+                            "stop",
+                            sshService,
+                            _profileService
+                        );
+
+                    case "start-service":
+                        sshService = _sshServiceFactory.CreateSshService(profile);
+                        return new SystemctlServiceCommand(
+                            profileName,
+                            "start",
+                            sshService,
+                            _profileService
+                        );
+
+                    case "restart-service":
+                        sshService = _sshServiceFactory.CreateSshService(profile);
+                        return new SystemctlServiceCommand(
+                            profileName,
+                            "restart",
+                            sshService,
+                            _profileService
+                        );
+
+                    case "deploy":
+                        bool force = options.Contains("--force");
+                        return new DeployCommand(
+                            profileName,
+                            force,
+                            _profileService,
+                            _deployService,
+                            _profileValidator,
+                            _logger
+                        );
+
+                    case "backup":
+                        return new BackupCommand(profileName, _backupService);
+                }
             }
 
-            string profileName = _profileManager.GetProfileName(options);
-            options = options.Skip(1).ToArray();
-
+            // Handle non-profile commands
             switch (commandName)
             {
-                case "deploy":
-                    if (_deployService == null)
-                    {
-                        throw new InvalidOperationException("DeployService is not initialized.");
-                    }
-                    bool force = options.Contains("--force");
-                    return new DeployCommand(profileName, force, _profileManager, _deployService);
+                case "list-profiles":
+                    return new ListProfilesCommand(_profileService);
 
                 case "add-profile":
-                    return new AddProfileCommand(_profileManager);
+                    return new AddProfileCommand(_profileService, _profilePromptService, _logger);
 
-                case "edit-profile":
-                    List<string> fields = ExtractFields(options);
-                    Dictionary<string, string> fieldSets = ExtractFieldSets(options);
-                    return new EditProfileCommand(profileName, fields, fieldSets, _profileManager);
-
-                case "list-profiles":
-                    return new ListProfilesCommand(_profileManager);
-
-                case "remove-profile":
-                    return new RemoveProfileCommand(_profileManager, profileName);
-
-                case "show-profile":
-                    return new ShowProfileCommand(_profileManager, profileName);
-
-                case "status-service":
-                    if (_sshService == null)
-                    {
-                        throw new InvalidOperationException("SshService is not initialized.");
-                    }
-                    return new SystemctlServiceCommand(profileName, "status", _sshService, _profileManager);
-
-                case "check-service":
-                    if (_sshService == null)
-                    {
-                        throw new InvalidOperationException("SshService is not initialized.");
-                    }
-                    return new SystemctlServiceCommand(profileName, "is-active", _sshService, _profileManager);
-
-                case "stop-service":
-                    if (_sshService == null)
-                    {
-                        throw new InvalidOperationException("SshService is not initialized.");
-                    }
-                    return new SystemctlServiceCommand(profileName, "stop", _sshService, _profileManager);
-
-                case "start-service":
-                    if (_sshService == null)
-                    {
-                        throw new InvalidOperationException("SshService is not initialized.");
-                    }
-                    return new SystemctlServiceCommand(profileName, "start", _sshService, _profileManager);
-
-                case "restart-service":
-                    if (_sshService == null)
-                    {
-                        throw new InvalidOperationException("SshService is not initialized.");
-                    }
-                    return new SystemctlServiceCommand(profileName, "restart", _sshService, _profileManager);
-
-                case "backup":
-                    if (_sshService == null || _sftpService == null)
-                    {
-                        throw new InvalidOperationException("SshService or SftpService is not initialized.");
-                    }
-                    return new BackupCommand(_sshService, _sftpService, _profileManager, _logger, profileName);
+                case "help":
+                    return new HelpCommand();
 
                 default:
+                    _logger.LogError(
+                        $"Unknown command: '{commandName}'. Use 'help' to see available commands."
+                    );
                     return new HelpCommand();
             }
         }
 
         private static List<string> ExtractFields(string[] options)
         {
-            List<string> fields = [];
+            var fields = new List<string>();
             for (int i = 0; i < options.Length; i++)
             {
                 if (
@@ -128,7 +181,7 @@ namespace CustomSftpTool.Parsers
 
         private static Dictionary<string, string> ExtractFieldSets(string[] options)
         {
-            Dictionary<string, string> fieldSets = [];
+            var fieldSets = new Dictionary<string, string>();
             for (int i = 0; i < options.Length; i++)
             {
                 if (

@@ -1,5 +1,3 @@
-using CustomSftpTool.Commands;
-
 namespace CustomSftpTool.Interfaces
 {
     public interface IProfileRequiredCommand : ICommand

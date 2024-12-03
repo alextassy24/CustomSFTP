@@ -1,4 +1,4 @@
-namespace CustomSftpTool.Commands
+namespace CustomSftpTool.Interfaces
 {
     public interface ICommand
     {

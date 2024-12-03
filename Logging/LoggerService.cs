@@ -39,7 +39,17 @@ namespace CustomSftpTool.Logging
 
         public void LogFatal(string message, Exception ex)
         {
-            Log.Fatal(ex, message);
+            string shortStackTrace = string.Join(
+                "\n",
+                ex.StackTrace?.Split('\n').Take(5) ?? new[] { "No stack trace available" }
+            );
+
+            Log.Fatal(
+                "{Message}\n{ExceptionMessage}\n{ShortStackTrace}",
+                message,
+                ex.Message,
+                shortStackTrace
+            );
         }
 
         // Optional method to flush and close the logger if needed

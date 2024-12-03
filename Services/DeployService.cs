@@ -1,6 +1,3 @@
-// Services/DeployService.cs
-using System.Diagnostics;
-using System.Threading.Tasks;
 using CustomSftpTool.Interfaces;
 using CustomSftpTool.Models;
 using Serilog;
@@ -9,16 +6,19 @@ namespace CustomSftpTool.Services
 {
     public class DeployService(
         IDotnetService dotnetService,
-        ISshService sshService,
-        ISftpService sftpService
+        ISshServiceFactory sshServiceFactory,
+        ISftpServiceFactory sftpServiceFactory
     ) : IDeployService
     {
         private readonly IDotnetService _dotnetService = dotnetService;
-        private readonly ISshService _sshService = sshService;
-        private readonly ISftpService _sftpService = sftpService;
+        private readonly ISshServiceFactory _sshServiceFactory = sshServiceFactory;
+        private readonly ISftpServiceFactory _sftpServiceFactory = sftpServiceFactory;
 
         public async Task<bool> RunDeploymentAsync(ProfileData profile, bool force)
         {
+            var sshService = _sshServiceFactory.CreateSshService(profile);
+            var sftpService = _sftpServiceFactory.CreateSftpService(profile);
+
             if (
                 string.IsNullOrEmpty(profile.CsprojPath)
                 || string.IsNullOrEmpty(profile.LocalDir)
@@ -53,8 +53,8 @@ namespace CustomSftpTool.Services
             }
             Log.Information("Publishing complete!");
 
-            _sshService.Connect();
-            string? serviceStatus = _sshService
+            sshService.Connect();
+            string? serviceStatus = sshService
                 .ExecuteCommand($"sudo systemctl is-active {profile.ServiceName}")
                 ?.Trim();
 
@@ -63,23 +63,23 @@ namespace CustomSftpTool.Services
             if (serviceStatus != "active")
             {
                 Log.Error($"Expected 'active', but got '{serviceStatus}'.");
-                _sshService.Disconnect();
+                sshService.Disconnect();
                 return false;
             }
 
-            _sshService.ExecuteCommand($"sudo systemctl stop {profile.ServiceName}");
+            sshService.ExecuteCommand($"sudo systemctl stop {profile.ServiceName}");
 
-            _sftpService.Connect();
-            await _sftpService.UploadDirectoryAsync(
+            sftpService.Connect();
+            await sftpService.UploadDirectoryAsync(
                 profile.LocalDir,
                 profile.RemoteDir,
                 profile.ExcludedFiles,
                 force
             );
-            _sftpService.Disconnect();
+            sftpService.Disconnect();
 
-            _sshService.ExecuteCommand($"sudo systemctl start {profile.ServiceName}");
-            _sshService.Disconnect();
+            sshService.ExecuteCommand($"sudo systemctl start {profile.ServiceName}");
+            sshService.Disconnect();
 
             Log.Information("Deployment completed successfully.");
             return true;

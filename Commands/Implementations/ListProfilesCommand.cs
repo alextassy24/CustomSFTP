@@ -1,17 +1,15 @@
-// Commands/Implementations/ListProfilesCommand.cs
 using CustomSftpTool.Data;
 using CustomSftpTool.Interfaces;
 
 namespace CustomSftpTool.Commands.Implementations
 {
-    public class ListProfilesCommand(IProfileManager profileManager) : ICommand
+    public class ListProfilesCommand(IProfileService profileService) : ICommand
     {
-        private readonly IProfileManager _profileManager = profileManager;
+        private readonly IProfileService _profileService = profileService;
 
         public Task Execute()
         {
-            var profiles = _profileManager.GetAllProfiles();
-
+            var profiles = _profileService.GetAllProfiles();
             if (profiles.Count == 0)
             {
                 Message.Display("No profiles found.", MessageType.Info);

@@ -15,6 +15,11 @@ namespace CustomSftpTool.Services
             _profilesDir = GetProfilesDirectory();
         }
 
+        public string GetProfileName(string[] options)
+        {
+            return options.FirstOrDefault(opt => !opt.StartsWith("--")) ?? string.Empty;
+        }
+
         private static string GetProfilesDirectory()
         {
             string profilesDir = Path.Combine(AppContext.BaseDirectory, "profiles");
@@ -90,7 +95,6 @@ namespace CustomSftpTool.Services
                     return;
                 }
 
-                // Rename the JSON file
                 var profilesDir = GetProfilesDirectory();
                 var oldProfilePath = Path.Combine(profilesDir, $"{oldName}.json");
                 var newProfilePath = Path.Combine(profilesDir, $"{newName}.json");
@@ -112,11 +116,6 @@ namespace CustomSftpTool.Services
                     return;
                 }
             }
-        }
-
-        public string GetProfileName(string[] options)
-        {
-            return options.FirstOrDefault(opt => !opt.StartsWith("--")) ?? string.Empty;
         }
     }
 }

@@ -1,24 +1,31 @@
-// Commands/Implementations/RemoveProfileCommand.cs
 using CustomSftpTool.Data;
 using CustomSftpTool.Interfaces;
 
 namespace CustomSftpTool.Commands.Implementations
 {
-    public class RemoveProfileCommand(IProfileManager profileManager, string profileName) : ICommand
+    public class RemoveProfileCommand(IProfileService profileService, string profileName) : ICommand
     {
-        private readonly IProfileManager _profileManager = profileManager;
+        private readonly IProfileService _profileService = profileService;
         private readonly string _profileName = profileName;
 
         public Task Execute()
         {
-            var profile = _profileManager.LoadProfile(_profileName);
+            var profile = _profileService.LoadProfile(_profileName);
             if (profile == null)
             {
                 Message.Display($"Error: Profile '{_profileName}' not found.", MessageType.Error);
                 return Task.CompletedTask;
             }
 
-            _profileManager.RemoveProfile(_profileName);
+            Console.WriteLine($"Are you sure you want to delete the profile '{_profileName}'? (y/n):");
+            var confirmation = Console.ReadLine();
+            if (!string.Equals(confirmation, "y", StringComparison.OrdinalIgnoreCase))
+            {
+                Message.Display($"Operation canceled. Profile '{_profileName}' was not removed.", MessageType.Warning);
+                return Task.CompletedTask;
+            }
+
+            _profileService.RemoveProfile(_profileName);
             Message.Display($"Profile '{_profileName}' removed successfully.", MessageType.Success);
 
             return Task.CompletedTask;
