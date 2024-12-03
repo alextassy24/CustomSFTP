@@ -14,7 +14,7 @@ namespace CustomSftpTool.Commands.Implementations
         private readonly IProfileManager _profileManager = profileManager;
         private readonly string _action = action;
 
-        public async Task Execute()
+        public Task Execute()
         {
             var profile = _profileManager.LoadProfile(_profileName);
             if (
@@ -24,15 +24,17 @@ namespace CustomSftpTool.Commands.Implementations
             )
             {
                 Console.WriteLine("Invalid or missing profile information.");
-                return;
+                return Task.CompletedTask;
             }
 
             _sshService.Connect();
-            string result = _sshService.ExecuteCommand(
+            string? result = _sshService.ExecuteCommand(
                 $"sudo systemctl {_action} {profile.ServiceName}"
             );
+            
             Console.WriteLine(result);
             _sshService.Disconnect();
+            return Task.CompletedTask;
         }
     }
 }

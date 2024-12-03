@@ -1,5 +1,6 @@
 using CustomSftpTool.Interfaces;
 using Renci.SshNet;
+using Renci.SshNet.Common;
 using Serilog;
 using ShellProgressBar;
 
@@ -46,7 +47,7 @@ namespace CustomSftpTool.Services
             {
                 using FileStream fileStream = File.OpenRead(localFilePath);
                 await Task.Run(() => _sftpClient.UploadFile(fileStream, remoteFilePath, true));
-                // Log.Information($"Uploaded file: {localFilePath} to {remoteFilePath}");
+                Log.Information($"Uploaded file: {localFilePath} to {remoteFilePath}");
                 return $"Uploaded file: {localFilePath} to {remoteFilePath}";
             }
             catch (Exception ex)
@@ -87,14 +88,25 @@ namespace CustomSftpTool.Services
                             ForegroundColor = ConsoleColor.Cyan,
                             ForegroundColorDone = ConsoleColor.DarkCyan,
                             BackgroundColor = ConsoleColor.DarkGray,
-                            ProgressCharacter = '█'
+                            ProgressCharacter = '█',
                         }
                     );
 
                 foreach (KeyValuePair<string, string> filePair in filesToUpload)
                 {
-                    var deployFile = await UploadFileAsync(filePair.Key, filePair.Value);
-                    progressBar.Tick($"Uploading {filePair.Key}");
+                    try
+                    {
+                        string remoteDir = Path.GetDirectoryName(filePair.Value)!
+                            .Replace("\\", "/");
+                        EnsureRemoteDirectoryExists(remoteDir);
+
+                        var deployFile = await UploadFileAsync(filePair.Key, filePair.Value);
+                        progressBar.Tick($"Uploading {filePair.Key}");
+                    }
+                    catch (SftpPathNotFoundException ex)
+                    {
+                        Log.Error(ex, $"Error uploading {filePair.Key}: {ex.Message}");
+                    }
                 }
 
                 return true;
@@ -113,7 +125,7 @@ namespace CustomSftpTool.Services
             bool force
         )
         {
-            List<KeyValuePair<string, string>> filesToUpload = [];
+            List<KeyValuePair<string, string>> filesToUpload = new();
 
             string[] files = Directory.GetFiles(localPath, "*", SearchOption.AllDirectories);
             foreach (string file in files)
@@ -132,6 +144,23 @@ namespace CustomSftpTool.Services
             }
 
             return filesToUpload;
+        }
+
+        private void EnsureRemoteDirectoryExists(string remoteDirectory)
+        {
+            try
+            {
+                if (!_sftpClient.Exists(remoteDirectory))
+                {
+                    _sftpClient.CreateDirectory(remoteDirectory);
+                    Log.Information($"Created remote directory: {remoteDirectory}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"Failed to create remote directory: {remoteDirectory}");
+                throw;
+            }
         }
 
         private static bool ShouldExclude(string relativePath, List<string> exclusions)

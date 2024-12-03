@@ -6,8 +6,8 @@ namespace CustomSftpTool.Services
     public class SftpServiceFactory(
         string host,
         string userName,
-        string password = null,
-        string privateKeyPath = null
+        string? password = null,
+        string? privateKeyPath = null
     ) : ISftpServiceFactory
     {
         private readonly string _host = host;

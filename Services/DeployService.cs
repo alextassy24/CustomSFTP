@@ -54,7 +54,7 @@ namespace CustomSftpTool.Services
             Log.Information("Publishing complete!");
 
             _sshService.Connect();
-            string serviceStatus = _sshService
+            string? serviceStatus = _sshService
                 .ExecuteCommand($"sudo systemctl is-active {profile.ServiceName}")
                 ?.Trim();
 

@@ -8,8 +8,8 @@ namespace CustomSftpTool.Services
         SshClient sshClient,
         string host,
         string userName,
-        string password = null,
-        string privateKeyPath = null
+        string? password = null,
+        string? privateKeyPath = null
     ) : ISshService
     {
         private SshClient _sshClient = sshClient;
