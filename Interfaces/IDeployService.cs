@@ -1,9 +1,8 @@
 using CustomSftpTool.Models;
 
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface IDeployService
 {
-    public interface IDeployService
-    {
-        Task<bool> RunDeploymentAsync(ProfileData profile, bool force);
-    }
+    Task<bool> RunDeploymentAsync(ProfileData profile, bool force);
 }

@@ -1,7 +1,6 @@
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface ICommand
 {
-    public interface ICommand
-    {
-        Task Execute();
-    }
+    Task Execute();
 }

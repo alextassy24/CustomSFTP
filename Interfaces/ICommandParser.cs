@@ -1,7 +1,6 @@
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface ICommandParser
 {
-    public interface ICommandParser
-    {
-        ICommand? Parse(string[] args);
-    }
+    ICommand? Parse(string[] args);
 }

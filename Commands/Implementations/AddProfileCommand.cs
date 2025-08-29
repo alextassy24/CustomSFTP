@@ -1,22 +1,17 @@
 using CustomSftpTool.Interfaces;
 
-namespace CustomSftpTool.Commands.Implementations
+namespace CustomSftpTool.Commands.Implementations;
+
+public class AddProfileCommand(IProfileService profileService, IProfilePromptService profilePromptService, ILoggerService logger) : ICommand
 {
-    public class AddProfileCommand(IProfileService profileService, IProfilePromptService profilePromptService, ILoggerService logger) : ICommand
+    public Task Execute()
     {
-        private readonly IProfileService _profileService = profileService;
-        private readonly IProfilePromptService _profilePromptService = profilePromptService;
-        private readonly ILoggerService _logger = logger;
+        var profileData = profilePromptService.PromptForProfileData();
 
-        public Task Execute()
-        {
-            var profileData = _profilePromptService.PromptForProfileData();
+        profileService.SaveProfile(profileData);
 
-            _profileService.SaveProfile(profileData);
+        logger.LogInfo($"Profile '{profileData.Name}' added successfully.");
 
-            _logger.LogInfo($"Profile '{profileData.Name}' added successfully.");
-
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
     }
 }

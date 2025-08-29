@@ -1,9 +1,8 @@
 using CustomSftpTool.Models;
 
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface IProfileValidator
 {
-    public interface IProfileValidator
-    {
-        bool Validate(ProfileData? profile, string profileName);
-    }
+    bool Validate(ProfileData? profile, string profileName);
 }

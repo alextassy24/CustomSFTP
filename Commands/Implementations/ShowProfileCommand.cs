@@ -6,15 +6,12 @@ namespace CustomSftpTool.Commands.Implementations
 {
     public class ShowProfileCommand(IProfileService profileService, string profileName) : ICommand
     {
-        private readonly IProfileService _profileService = profileService;
-        private readonly string _profileName = profileName;
-
         public Task Execute()
         {
-            var profile = _profileService.LoadProfile(_profileName);
+            var profile = profileService.LoadProfile(profileName);
             if (profile == null || string.IsNullOrWhiteSpace(profile.Name))
             {
-                Message.Display($"Error: Profile '{_profileName}' not found.", MessageType.Error);
+                Message.Display($"Error: Profile '{profileName}' not found.", MessageType.Error);
                 return Task.CompletedTask;
             }
 

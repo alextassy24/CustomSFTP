@@ -1,7 +1,6 @@
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface IBackupService
 {
-    public interface IBackupService
-    {
-        Task<bool> RunBackupAsync(string profileName);
-    }
+    Task<bool> RunBackupAsync(string profileName);
 }

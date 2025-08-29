@@ -1,9 +1,8 @@
 using CustomSftpTool.Models;
 
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface ISshServiceFactory
 {
-    public interface ISshServiceFactory
-    {
-        ISshService CreateSshService(ProfileData profile);
-    }
+    ISshService CreateSshService(ProfileData profile);
 }

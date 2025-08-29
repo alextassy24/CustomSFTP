@@ -4,117 +4,110 @@ using CustomSftpTool.Data;
 using CustomSftpTool.Interfaces;
 using CustomSftpTool.Models;
 
-namespace CustomSftpTool.Services
+namespace CustomSftpTool.Services;
+
+public class ProfileManager : IProfileManager
 {
-    public class ProfileManager : IProfileManager
+    private readonly string _profilesDir = GetProfilesDirectory();
+
+    public string GetProfileName(string[] options)
     {
-        private readonly string _profilesDir;
+        return options.FirstOrDefault(opt => !opt.StartsWith("--")) ?? string.Empty;
+    }
 
-        public ProfileManager()
+    private static string GetProfilesDirectory()
+    {
+        var profilesDir = Path.Combine(AppContext.BaseDirectory, "profiles");
+        Directory.CreateDirectory(profilesDir);
+        return profilesDir;
+    }
+
+    public void AddProfile(ProfileData profile)
+    {
+        if (string.IsNullOrEmpty(profile.Name))
         {
-            _profilesDir = GetProfilesDirectory();
+            return;
+        }
+        SaveProfile(profile.Name, profile);
+    }
+
+    public ProfileData? LoadProfile(string profileName)
+    {
+        var profilePath = Path.Combine(_profilesDir, $"{profileName}.json");
+        if (!File.Exists(profilePath))
+        {
+            return null;
         }
 
-        public string GetProfileName(string[] options)
+        var json = File.ReadAllText(profilePath);
+        var profileData = JsonSerializer.Deserialize<ProfileData>(json);
+        return profileData;
+    }
+
+    public void SaveProfile(string profileName, ProfileData profileData)
+    {
+        var profilePath = Path.Combine(_profilesDir, $"{profileName}.json");
+        var json = JsonSerializer.Serialize(
+            profileData,
+            new JsonSerializerOptions { WriteIndented = true }
+        );
+        File.WriteAllText(profilePath, json);
+    }
+
+    public void RemoveProfile(string profileName)
+    {
+        var profilePath = Path.Combine(_profilesDir, $"{profileName}.json");
+        if (File.Exists(profilePath))
         {
-            return options.FirstOrDefault(opt => !opt.StartsWith("--")) ?? string.Empty;
+            File.Delete(profilePath);
+        }
+    }
+
+    public List<string> GetAllProfiles()
+    {
+        if (!Directory.Exists(_profilesDir))
+        {
+            return [];
         }
 
-        private static string GetProfilesDirectory()
-        {
-            string profilesDir = Path.Combine(AppContext.BaseDirectory, "profiles");
-            Directory.CreateDirectory(profilesDir);
-            return profilesDir;
-        }
+        return Directory
+            .EnumerateFiles(_profilesDir, "*.json")
+            .Select(static file => Path.GetFileNameWithoutExtension(file))
+            .ToList();
+    }
 
-        public void AddProfile(ProfileData profile)
+    public void FileNameChange(string oldName, string newName)
+    {
+        if (!string.Equals(newName, oldName, StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrEmpty(profile.Name))
+            Console.WriteLine(
+                $"Do you want to rename the profile from '{oldName}' to '{newName}'? (y/n)"
+            );
+            var response = Console.ReadLine();
+            if (!string.Equals(response, "y", StringComparison.OrdinalIgnoreCase))
             {
+                Message.Display("Profile renaming canceled.", MessageType.Warning);
                 return;
             }
-            SaveProfile(profile.Name, profile);
-        }
 
-        public ProfileData? LoadProfile(string profileName)
-        {
-            string profilePath = Path.Combine(_profilesDir, $"{profileName}.json");
-            if (!File.Exists(profilePath))
+            var profilesDir = GetProfilesDirectory();
+            var oldProfilePath = Path.Combine(profilesDir, $"{oldName}.json");
+            var newProfilePath = Path.Combine(profilesDir, $"{newName}.json");
+
+            try
             {
-                return null;
-            }
-
-            string json = File.ReadAllText(profilePath);
-            ProfileData? profileData = JsonSerializer.Deserialize<ProfileData>(json);
-            return profileData;
-        }
-
-        public void SaveProfile(string profileName, ProfileData profileData)
-        {
-            string profilePath = Path.Combine(_profilesDir, $"{profileName}.json");
-            string json = JsonSerializer.Serialize(
-                profileData,
-                new JsonSerializerOptions { WriteIndented = true }
-            );
-            File.WriteAllText(profilePath, json);
-        }
-
-        public void RemoveProfile(string profileName)
-        {
-            string profilePath = Path.Combine(_profilesDir, $"{profileName}.json");
-            if (File.Exists(profilePath))
-            {
-                File.Delete(profilePath);
-            }
-        }
-
-        public List<string> GetAllProfiles()
-        {
-            if (!Directory.Exists(_profilesDir))
-            {
-                return [];
-            }
-
-            return Directory
-                .EnumerateFiles(_profilesDir, "*.json")
-                .Select(static file => Path.GetFileNameWithoutExtension(file))
-                .ToList();
-        }
-
-        public void FileNameChange(string oldName, string newName)
-        {
-            if (!string.Equals(newName, oldName, StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine(
-                    $"Do you want to rename the profile from '{oldName}' to '{newName}'? (y/n)"
+                File.Move(oldProfilePath, newProfilePath);
+                Message.Display(
+                    $"Profile renamed from '{oldName}' to '{newName}'.",
+                    MessageType.Success
                 );
-                var response = Console.ReadLine();
-                if (!string.Equals(response, "y", StringComparison.OrdinalIgnoreCase))
-                {
-                    Message.Display("Profile renaming canceled.", MessageType.Warning);
-                    return;
-                }
-
-                var profilesDir = GetProfilesDirectory();
-                var oldProfilePath = Path.Combine(profilesDir, $"{oldName}.json");
-                var newProfilePath = Path.Combine(profilesDir, $"{newName}.json");
-
-                try
-                {
-                    File.Move(oldProfilePath, newProfilePath);
-                    Message.Display(
-                        $"Profile renamed from '{oldName}' to '{newName}'.",
-                        MessageType.Success
-                    );
-                }
-                catch (Exception ex)
-                {
-                    Message.Display(
-                        $"Error renaming profile file: {ex.Message}",
-                        MessageType.Error
-                    );
-                    return;
-                }
+            }
+            catch (Exception ex)
+            {
+                Message.Display(
+                    $"Error renaming profile file: {ex.Message}",
+                    MessageType.Error
+                );
             }
         }
     }

@@ -1,24 +1,19 @@
 using CustomSftpTool.Interfaces;
-using CustomSftpTool.Parsers;
 
-namespace CustomSftpTool.Services
+namespace CustomSftpTool.Services;
+
+public class CommandExecutor(ICommandParser parser, ILoggerService logger) : ICommandExecutor
 {
-    public class CommandExecutor(ICommandParser parser, ILoggerService logger) : ICommandExecutor
+    public async Task Execute(string[] args)
     {
-        private readonly ICommandParser _parser = parser;
-        private readonly ILoggerService _logger = logger;
-
-        public async Task Execute(string[] args)
+        var command = parser.Parse(args);
+        if (command != null)
         {
-            var command = _parser.Parse(args);
-            if (command != null)
-            {
-                await command.Execute();
-            }
-            else
-            {
-                _logger.LogWarning("Command not recognized.");
-            }
+            await command.Execute();
+        }
+        else
+        {
+            logger.LogWarning("Command not recognized.");
         }
     }
 }

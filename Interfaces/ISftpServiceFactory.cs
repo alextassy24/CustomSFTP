@@ -1,9 +1,8 @@
 using CustomSftpTool.Models;
 
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface ISftpServiceFactory
 {
-    public interface ISftpServiceFactory
-    {
-        ISftpService CreateSftpService(ProfileData profile);
-    }
+    ISftpService CreateSftpService(ProfileData profile);
 }

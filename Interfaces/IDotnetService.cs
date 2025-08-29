@@ -1,8 +1,7 @@
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface IDotnetService
 {
-    public interface IDotnetService
-    {
-        Task<bool> CleanApplicationAsync(string csprojPath);
-        Task<bool> PublishApplicationAsync(string csprojPath, string outputPath);
-    }
+    Task<bool> CleanApplicationAsync(string csprojPath);
+    Task<bool> PublishApplicationAsync(string csprojPath, string outputPath);
 }

@@ -1,11 +1,10 @@
-namespace CustomSftpTool.Data
+namespace CustomSftpTool.Data;
+
+public enum MessageType
 {
-    public enum MessageType
-    {
-        Info,
-        Warning,
-        Error,
-        Success,
-        Debug
-    }
+    Info,
+    Warning,
+    Error,
+    Success,
+    Debug
 }

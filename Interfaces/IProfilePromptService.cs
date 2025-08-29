@@ -1,10 +1,8 @@
 using CustomSftpTool.Models;
 
-namespace CustomSftpTool.Interfaces
+namespace CustomSftpTool.Interfaces;
+
+public interface IProfilePromptService
 {
-    public interface IProfilePromptService
-    {
-        ProfileData PromptForProfileData();
-        List<string> PromptForExcludedFiles(List<string>? existingExclusions = null);
-    }
+    ProfileData PromptForProfileData();
 }

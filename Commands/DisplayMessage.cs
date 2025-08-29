@@ -1,26 +1,25 @@
 using CustomSftpTool.Data;
 
-namespace CustomSftpTool.Commands
+namespace CustomSftpTool.Commands;
+
+public class Message
 {
-    public class Message
+    public static void Display(string message, MessageType messageType)
     {
-        public static void Display(string message, MessageType messageType)
+        var color = messageType switch
         {
-            var color = messageType switch
-            {
-                MessageType.Info => ConsoleColor.White,
-                MessageType.Warning => ConsoleColor.Yellow,
-                MessageType.Error => ConsoleColor.Red,
-                MessageType.Success => ConsoleColor.Green,
-                MessageType.Debug => ConsoleColor.Cyan,
-                _ => ConsoleColor.White,
-            };
+            MessageType.Info => ConsoleColor.White,
+            MessageType.Warning => ConsoleColor.Yellow,
+            MessageType.Error => ConsoleColor.Red,
+            MessageType.Success => ConsoleColor.Green,
+            MessageType.Debug => ConsoleColor.Cyan,
+            _ => ConsoleColor.White,
+        };
 
-            Console.ForegroundColor = color;
+        Console.ForegroundColor = color;
 
-            Console.WriteLine(message);
+        Console.WriteLine(message);
 
-            Console.ResetColor();
-        }
+        Console.ResetColor();
     }
 }

@@ -1,6 +1,5 @@
 using CustomSftpTool.Data;
 using CustomSftpTool.Interfaces;
-using CustomSftpTool.Models;
 
 namespace CustomSftpTool.Commands.Implementations
 {
@@ -11,15 +10,10 @@ namespace CustomSftpTool.Commands.Implementations
         IProfileService profileService
     ) : ICommand
     {
-        private readonly string _profileName = profileName;
-        private readonly string _action = action;
-        private readonly ISshService _sshService = sshService;
-        private readonly IProfileService _profileService = profileService;
-
         public Task Execute()
         {
             // Load profile
-            var profile = _profileService.LoadProfile(_profileName);
+            var profile = profileService.LoadProfile(profileName);
             if (profile == null || string.IsNullOrEmpty(profile.ServiceName))
             {
                 Message.Display("Invalid or missing profile information.", MessageType.Error);
@@ -27,11 +21,11 @@ namespace CustomSftpTool.Commands.Implementations
             }
 
             // Execute systemctl command
-            _sshService.Connect();
+            sshService.Connect();
             try
             {
                 var command = BuildSystemctlCommand(profile.ServiceName);
-                var result = _sshService.ExecuteCommand(command);
+                var result = sshService.ExecuteCommand(command);
 
                 if (!string.IsNullOrEmpty(result))
                 {
@@ -48,7 +42,7 @@ namespace CustomSftpTool.Commands.Implementations
             }
             finally
             {
-                _sshService.Disconnect();
+                sshService.Disconnect();
             }
 
             return Task.CompletedTask;
@@ -56,7 +50,7 @@ namespace CustomSftpTool.Commands.Implementations
 
         private string BuildSystemctlCommand(string serviceName)
         {
-            return $"sudo systemctl {_action} {serviceName}";
+            return $"sudo systemctl {action} {serviceName}";
         }
     }
 }

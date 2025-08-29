@@ -1,19 +1,15 @@
 using CustomSftpTool.Interfaces;
 
-namespace CustomSftpTool.Commands.Implementations
-{
-    public class BackupCommand(string profileName, IBackupService backupService) : ICommand
-    {
-        private readonly string _profileName = profileName;
-        private readonly IBackupService _backupService = backupService;
+namespace CustomSftpTool.Commands.Implementations;
 
-        public async Task Execute()
+public class BackupCommand(string profileName, IBackupService backupService) : ICommand
+{
+    public async Task Execute()
+    {
+        var success = await backupService.RunBackupAsync(profileName);
+        if (!success)
         {
-            bool success = await _backupService.RunBackupAsync(_profileName);
-            if (!success)
-            {
-                Console.WriteLine($"Backup failed for profile '{_profileName}'.");
-            }
+            Console.WriteLine($"Backup failed for profile '{profileName}'.");
         }
     }
 }
