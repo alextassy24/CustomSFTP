@@ -7,25 +7,15 @@ namespace CustomSftpTool.Services;
 
 public class ProfileService(IProfileManager profileManager) : IProfileService
 {
-    public ProfileData? LoadProfile(string profileName)
-    {
-        return profileManager.LoadProfile(profileName);
-    }
+    public ProfileData? LoadProfile(string profileName) => profileManager.LoadProfile(profileName);
 
-    public string GetProfileName(string[] options)
-    {
-        return options.Length > 0 ? options[0] : string.Empty;
-    }
+    public string GetProfileName(string[] options) => 
+        options.FirstOrDefault(opt => !opt.StartsWith("--")) ?? string.Empty;
 
-    public void SaveProfile(ProfileData profile)
-    {
+    public void SaveProfile(ProfileData profile) => 
         profileManager.SaveProfile(profile.Name!, profile);
-    }
 
-    public List<string> GetAllProfiles()
-    {
-        return profileManager.GetAllProfiles();
-    }
+    public List<string> GetAllProfiles() => profileManager.GetAllProfiles();
 
     public void RemoveProfile(string profileName)
     {
@@ -34,42 +24,26 @@ public class ProfileService(IProfileManager profileManager) : IProfileService
         {
             throw new FileNotFoundException($"Profile '{profileName}' not found.");
         }
-
         File.Delete(profilePath);
     }
 
     public void UpdateProfileFields(ProfileData profile, Dictionary<string, string> fieldSets)
     {
-        foreach (var kvp in fieldSets)
+        foreach (var (key, value) in fieldSets)
         {
-            switch (kvp.Key.ToLower())
+            switch (key.ToLower())
             {
-                case "--name":
-                    profile.Name = kvp.Value;
-                    break;
-                case "--host":
-                    profile.Host = kvp.Value;
-                    break;
-                case "--user-name":
-                    profile.UserName = kvp.Value;
-                    break;
-                case "--password":
-                    profile.Password = kvp.Value;
-                    break;
-                case "--private-key-path":
-                    profile.PrivateKeyPath = kvp.Value;
-                    break;
-                case "--csproj-path":
-                    profile.CsprojPath = kvp.Value;
-                    break;
-                case "--local-dir":
-                    profile.LocalDir = kvp.Value;
-                    break;
-                case "--remote-dir":
-                    profile.RemoteDir = kvp.Value;
-                    break;
-                case "--service-name":
-                    profile.ServiceName = kvp.Value;
+                case "--name": profile.Name = value; break;
+                case "--host": profile.Host = value; break;
+                case "--user-name": profile.UserName = value; break;
+                case "--password": profile.Password = value; break;
+                case "--private-key-path": profile.PrivateKeyPath = value; break;
+                case "--csproj-path": profile.CsprojPath = value; break;
+                case "--local-dir": profile.LocalDir = value; break;
+                case "--remote-dir": profile.RemoteDir = value; break;
+                case "--service-name": profile.ServiceName = value; break;
+                default:
+                    Message.Display($"Unknown field: {key}", MessageType.Warning);
                     break;
             }
         }
@@ -77,57 +51,57 @@ public class ProfileService(IProfileManager profileManager) : IProfileService
 
     public void PromptToUpdateProfile(ProfileData profile)
     {
-        profile.Name = Prompt("Profile Name", profile.Name, true);
-        profile.Host = Prompt("Host", profile.Host, true);
-        profile.UserName = Prompt("Username", profile.UserName, true);
-        profile.Password = Prompt("Password", profile.Password, true);
-        profile.PrivateKeyPath = Prompt("Private Key Path", profile.PrivateKeyPath, true);
-        profile.CsprojPath = Prompt("Csproj Path", profile.CsprojPath, true);
-        profile.LocalDir = Prompt("Local Directory", profile.LocalDir, true);
-        profile.RemoteDir = Prompt("Remote Directory", profile.RemoteDir, true);
-        profile.ServiceName = Prompt("Service Name", profile.ServiceName, true);
+        profile.Name = PromptForValue("Profile Name", profile.Name, true);
+        profile.Host = PromptForValue("Host", profile.Host, true);
+        profile.UserName = PromptForValue("Username", profile.UserName, true);
+        
+        // Handle authentication method
+        var authMethod = PromptForValue("Authentication method (password/key)", "password", false);
+        if (authMethod.Equals("password", StringComparison.OrdinalIgnoreCase))
+        {
+            profile.Password = PromptForValue("Password", profile.Password, true);
+            profile.PrivateKeyPath = null;
+        }
+        else
+        {
+            profile.PrivateKeyPath = PromptForValue("Private Key Path", profile.PrivateKeyPath, true);
+            profile.Password = null;
+        }
+        
+        profile.CsprojPath = PromptForValue("Csproj Path", profile.CsprojPath, true);
+        profile.LocalDir = PromptForValue("Local Directory", profile.LocalDir, true);
+        profile.RemoteDir = PromptForValue("Remote Directory", profile.RemoteDir, true);
+        profile.ServiceName = PromptForValue("Service Name", profile.ServiceName, true);
     }
 
-    public void RenameProfileFile(string oldName, string newName)
-    {
+    public void RenameProfileFile(string oldName, string newName) => 
         profileManager.FileNameChange(oldName, newName);
-    }
 
-    private static string Prompt(
-        string message,
-        string? defaultValue = null,
-        bool isRequired = false
-    )
+    private static string PromptForValue(string fieldName, string? defaultValue = null, bool isRequired = false)
     {
         while (true)
         {
-            Console.Write($"{message} [{defaultValue ?? string.Empty}]: ");
-            var input = Console.ReadLine();
+            Console.Write($"{fieldName} [{defaultValue ?? ""}]: ");
+            var input = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrEmpty(input))
             {
                 if (isRequired && string.IsNullOrEmpty(defaultValue))
                 {
-                    Message.Display($"{message} is required.", MessageType.Error);
+                    Message.Display($"{fieldName} is required.", MessageType.Error);
                     continue;
                 }
-
-                if (!string.IsNullOrEmpty(defaultValue))
-                {
-                    return defaultValue;
-                }
+                return defaultValue ?? string.Empty;
             }
-            return input ?? string.Empty;
+            
+            return input;
         }
     }
 
-    private string GetProfilesDirectory()
+    private static string GetProfilesDirectory()
     {
         var profilesDir = Path.Combine(AppContext.BaseDirectory, "profiles");
-        if (!Directory.Exists(profilesDir))
-        {
-            Directory.CreateDirectory(profilesDir);
-        }
+        Directory.CreateDirectory(profilesDir);
         return profilesDir;
     }
 }

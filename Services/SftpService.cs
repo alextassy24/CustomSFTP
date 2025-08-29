@@ -34,17 +34,23 @@ public class SftpService(SftpClient sftpClient) : ISftpService
 
     public async Task UploadFileAsync(string localFilePath, string remoteFilePath)
     {
+        // Ensure the remote directory exists before uploading
+        var remoteDir = Path.GetDirectoryName(remoteFilePath)?.Replace("\\", "/");
+        if (!string.IsNullOrEmpty(remoteDir))
+        {
+            EnsureRemoteDirectoryExists(remoteDir);
+        }
+
         await using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
         await Task.Run(() => sftpClient.UploadFile(fileStream, remoteFilePath, true));
-        Log.Information("Uploaded file '{s}' to '{remoteFilePath1}'.", localFilePath, remoteFilePath);
+        Log.Information("Uploaded file '{LocalPath}' to '{RemotePath}'.", localFilePath, remoteFilePath);
     }
 
     public async Task<bool> UploadDirectoryAsync(
         string localPath,
         string remotePath,
         List<string> exclusions,
-        bool force = false
-    )
+        bool force = false)
     {
         try
         {
@@ -53,8 +59,10 @@ public class SftpService(SftpClient sftpClient) : ISftpService
                 throw new InvalidOperationException("SFTP client is not connected.");
             }
 
-            var files = Directory.GetFiles(localPath, "*", SearchOption.AllDirectories);
+            EnsureRemoteDirectoryExists(remotePath);
 
+            var files = Directory.GetFiles(localPath, "*", SearchOption.AllDirectories);
+            
             foreach (var file in files)
             {
                 var relativePath = Path.GetRelativePath(localPath, file).Replace("\\", "/");
@@ -62,50 +70,82 @@ public class SftpService(SftpClient sftpClient) : ISftpService
 
                 if (ShouldExclude(relativePath, exclusions))
                 {
-                    Log.Information("Excluding file: {s}", file);
+                    Log.Information("Excluding file: {FilePath}", file);
                     continue;
                 }
 
                 if (!force && RemoteFileMatches(file, remoteFilePath))
                 {
+                    Log.Debug("Skipping unchanged file: {FilePath}", file);
                     continue;
                 }
 
-                Path.GetDirectoryName(remoteFilePath)?.Replace("\\", "/");
+                var remoteDir = Path.GetDirectoryName(remoteFilePath)?.Replace("\\", "/");
+                if (!string.IsNullOrEmpty(remoteDir))
+                {
+                    EnsureRemoteDirectoryExists(remoteDir);
+                }
 
-                Log.Information("Uploading file: {s} to {remoteFilePath1}", file, remoteFilePath);
-                await using var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read);
-                await Task.Run(() => sftpClient.UploadFile(fileStream, remoteFilePath, true));
+                Log.Information("Uploading file: {LocalPath} to {RemotePath}", file, remoteFilePath);
+                
+                try
+                {
+                    await using var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read);
+                    await Task.Run(() => sftpClient.UploadFile(fileStream, remoteFilePath, true));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to upload file: {FilePath}", file);
+                    throw;
+                }
             }
 
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error uploading directory.");
+            Log.Error(ex, "Error uploading directory from {LocalPath} to {RemotePath}.", localPath, remotePath);
             return false;
         }
     }
 
     public async Task DownloadFileAsync(string remoteFilePath, string localFilePath)
     {
+        var localDir = Path.GetDirectoryName(localFilePath);
+        if (!string.IsNullOrEmpty(localDir))
+        {
+            Directory.CreateDirectory(localDir);
+        }
+
         await using var fileStream = new FileStream(localFilePath, FileMode.Create, FileAccess.Write);
         await Task.Run(() => sftpClient.DownloadFile(remoteFilePath, fileStream));
-        Log.Information("Downloaded file '{s}' to '{localFilePath1}'.", remoteFilePath, localFilePath);
+        Log.Information("Downloaded file '{RemotePath}' to '{LocalPath}'.", remoteFilePath, localFilePath);
     }
 
     private void EnsureRemoteDirectoryExists(string remotePath)
     {
-        var pathParts = remotePath.Split('/');
-        var currentPath = "";
-
-        foreach (var part in pathParts)
+        try
         {
-            currentPath = string.IsNullOrEmpty(currentPath) ? part : $"{currentPath}/{part}";
-            if (!sftpClient.Exists(currentPath))
+            remotePath = remotePath.Replace("\\", "/");
+            
+            var pathParts = remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var currentPath = remotePath.StartsWith($"/") ? "/" : "";
+
+            foreach (var part in pathParts)
             {
-                sftpClient.CreateDirectory(currentPath);
+                currentPath = currentPath == "/" ? $"/{part}" : $"{currentPath}/{part}";
+                
+                if (!sftpClient.Exists(currentPath))
+                {
+                    Log.Debug("Creating remote directory: {Directory}", currentPath);
+                    sftpClient.CreateDirectory(currentPath);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to create remote directory: {Directory}", remotePath);
+            throw;
         }
     }
 
@@ -113,21 +153,29 @@ public class SftpService(SftpClient sftpClient) : ISftpService
     {
         relativePath = relativePath.Replace("\\", "/");
         return exclusions.Any(exclusion =>
-            relativePath.StartsWith(exclusion.Replace("\\", "/"))
+            relativePath.StartsWith(exclusion.Replace("\\", "/"), StringComparison.OrdinalIgnoreCase)
         );
     }
 
     private bool RemoteFileMatches(string localFilePath, string remoteFilePath)
     {
-        if (!sftpClient.Exists(remoteFilePath))
+        try
         {
-            return false; // File does not exist remotely
+            if (!sftpClient.Exists(remoteFilePath))
+            {
+                return false;
+            }
+
+            var localFileInfo = new FileInfo(localFilePath);
+            var remoteFileInfo = sftpClient.GetAttributes(remoteFilePath);
+
+            return localFileInfo.Length == remoteFileInfo.Size &&
+                   localFileInfo.LastWriteTimeUtc <= remoteFileInfo.LastWriteTime;
         }
-
-        var localFileInfo = new FileInfo(localFilePath);
-        var remoteFileInfo = sftpClient.GetAttributes(remoteFilePath);
-
-        return localFileInfo.Length == remoteFileInfo.Size
-               && localFileInfo.LastWriteTimeUtc <= remoteFileInfo.LastWriteTime;
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Could not compare file attributes for {FilePath}", remoteFilePath);
+            return false;
+        }
     }
 }
