@@ -56,7 +56,7 @@ namespace CustomSftpTool.Services
                     throw new InvalidOperationException("SFTP client is not connected.");
                 }
 
-                EnsureRemoteDirectoryExists(remotePath);
+                // EnsureRemoteDirectoryExists(remotePath);
 
                 var files = Directory.GetFiles(localPath, "*", SearchOption.AllDirectories);
 
@@ -73,15 +73,15 @@ namespace CustomSftpTool.Services
 
                     if (!force && RemoteFileMatches(file, remoteFilePath))
                     {
-                        Log.Information($"Skipping upload: {file}");
+                        // Log.Information($"Skipping upload: {file}");
                         continue;
                     }
 
                     var remoteFileDir = Path.GetDirectoryName(remoteFilePath)?.Replace("\\", "/");
-                    if (!string.IsNullOrEmpty(remoteFileDir))
-                    {
-                        EnsureRemoteDirectoryExists(remoteFileDir);
-                    }
+                    // if (!string.IsNullOrEmpty(remoteFileDir))
+                    // {
+                    //     EnsureRemoteDirectoryExists(remoteFileDir);
+                    // }
 
                     Log.Information($"Uploading file: {file} to {remoteFilePath}");
                     using var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read);
